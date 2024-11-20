@@ -2,6 +2,8 @@
 urls.txt
 crawling_log.txt
 error_url.txt
+urls-full.txt
+API_log.txt
 # Logs
 
 logs
