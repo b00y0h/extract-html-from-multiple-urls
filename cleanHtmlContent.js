@@ -148,4 +148,4 @@ function cleanHtmlContent(contentHtml, url) {
     .replace(/^\s+/gm, "");
 }
 
-module.exports = cleanHtmlContent;
+module.exports = { cleanHtmlContent };
