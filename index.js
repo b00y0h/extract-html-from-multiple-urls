@@ -108,11 +108,11 @@ async function processContent(contentResponse, url, currentUrl, totalUrls) {
 
   if (sections.length) {
     const contentHtml = sections.join("\n");
-    const cleanedContent = cleanHtmlContent(contentHtml, url);
+    const cleanedContent = await cleanHtmlContent(contentHtml, url);
     const directoryPath = createDirectoriesFromUrl(url);
     const sanitizedFileName = sanitizeFileName(url) + ".txt";
     const filePath = path.join(directoryPath, sanitizedFileName);
-    // fs.writeFileSync(filePath, cleanedContent);
+    fs.writeFileSync(filePath, cleanedContent);
     console.log(`Finished: ${currentUrl} of ${totalUrls}: ✅ : ${url}`);
     logMessage(
       `Successfully processed: ${url} - Status: ${contentResponse.status}`
@@ -140,6 +140,7 @@ async function processContent(contentResponse, url, currentUrl, totalUrls) {
       slug: slug,
     };
 
+    // let pageId = null;
     // Post the content to the WordPress API
     const pageId = await postToWordPress(post);
 

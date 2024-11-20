@@ -1,4 +1,60 @@
+require("dotenv").config();
 const cheerio = require("cheerio");
+
+const wpConfig = {
+  endpoint: process.env.WP_API_BASE_URL,
+  username: process.env.WP_API_USERNAME,
+  password: process.env.WP_API_USERNAME,
+};
+function transformColumnsToWpBlocks(content) {
+  // console.log("⭐��⭐ ~ transformColumnsToWpBlocks ~ content:", content);
+  const $ = cheerio.load(content);
+
+  // Select the direct child divs within the paragraph__column that have a class containing "bp-columns"
+  const childDivs = $(".paragraph__column > div[class*='bp-columns']");
+
+  // Array to hold each column's content
+  let columns = [];
+
+  // Iterate over each child div and store its HTML content
+  childDivs.each((i, childDiv) => {
+    columns.push($(childDiv).html().trim());
+  });
+
+  // if columns.length is 0 then return null
+  if (columns.length === 0) {
+    return null;
+  }
+
+  // Determine the layout based on the number of columns
+  let layout;
+  switch (columns.length) {
+    case 2:
+      layout = "halves";
+      break;
+    case 3:
+      layout = "thirds";
+      break;
+    case 4:
+      layout = "quarters";
+      break;
+    default:
+      // Return the childDivs directly for the default case
+      return childDivs.map((i, el) => $(el).html().trim()).get();
+  }
+
+  // Start building the output
+  let output = `<!-- wp:wsuwp/row {"layout":"${layout}"} -->\n`;
+
+  // Add each column to the output
+  columns.forEach((column) => {
+    output += `<!-- wp:wsuwp/column -->\n${column}\n<!-- /wp:wsuwp/column -->\n`;
+  });
+
+  // Close the row block
+  output += `<!-- /wp:wsuwp/row -->`;
+  return output;
+}
 
 // Extract the root URL (protocol and host) from a given URL
 function getRootUrl(url) {
@@ -12,16 +68,35 @@ function getRootUrl(url) {
 }
 
 // Clean and transform HTML content for further processing
-function cleanHtmlContent(contentHtml, url) {
+async function cleanHtmlContent(contentHtml, url) {
   const $ = cheerio.load(contentHtml);
   const rootUrl = getRootUrl(url);
+
+  // Remove commented-out content
+  $("*").each(function () {
+    const $this = $(this);
+
+    // Find and remove comments that contain HTML-like structures
+    $this
+      .contents()
+      .filter(function () {
+        return (
+          this.type === "comment" &&
+          this.data.includes("<") &&
+          this.data.includes(">")
+        );
+      })
+      .remove();
+  });
 
   // Remove specific <a> tags
   $("a#main-content").remove();
   $('a[href="#main-content"]:contains("Back to top")').remove();
 
   // Remove empty <p> tags
-  $("p:empty").remove();
+  // $("p:empty").remove();
+  // Remove empty <div> tags
+  $("div:empty").remove();
 
   // Replace <span> tags but keep their content
   $("span").each((i, el) => {
@@ -35,7 +110,7 @@ function cleanHtmlContent(contentHtml, url) {
 
   // Transform specific <div> to WordPress blocks
   $("div.paragraph.paragraph--type--bp-columns").each((i, el) => {
-    const transformedContent = transformContentToWpBlocks($.html(el));
+    const transformedContent = transformColumnsToWpBlocks($.html(el));
     $(el).replaceWith(transformedContent);
   });
 
@@ -54,6 +129,38 @@ function cleanHtmlContent(contentHtml, url) {
     }
   });
 
+  // Wrap <p> tags in WordPress paragraph blocks
+  // and clean up empty paragraphs
+  $("p").each(function () {
+    const $this = $(this);
+
+    // Check if paragraph contains only anchor tags with btn-default class
+    if (
+      $this.children("a.btn-default").length > 0 &&
+      $this.children("a.btn-default").length === $this.children().length
+    ) {
+      // Replace the paragraph with just its anchor tags
+      $this.replaceWith($this.html());
+    } else if ($this.text().trim() === "") {
+      if (
+        $this
+          .text()
+          .includes(
+            "The Student Wellness Center provides free, confidential counseling"
+          )
+      ) {
+        console.log("found the2: The Student Wellness: content");
+      }
+      // Remove empty or whitespace-only paragraphs
+      $this.remove();
+    } else {
+      // Replace non-empty paragraphs with the desired format
+      $this.replaceWith(
+        `<!-- wp:paragraph -->\n<p>${$this.html()}</p>\n<!-- /wp:paragraph -->\n`
+      );
+    }
+  });
+
   // Convert <a> tags with class 'btn' to WordPress button blocks
   $("a.btn").each((i, el) => {
     const href = $(el).attr("href");
@@ -63,23 +170,45 @@ function cleanHtmlContent(contentHtml, url) {
     );
   });
 
-  // Wrap <p> tags in WordPress paragraph blocks
-  $("p").each((i, el) => {
-    const text = $(el).html().trim();
-    if (text) {
-      $(el).replaceWith(
-        `<!-- wp:paragraph -->\n<p>${text}</p>\n<!-- /wp:paragraph -->\n`
-      );
-    }
-  });
+  // Prepend root URL to <img> src paths and upload images to WordPress
+  const imgElements = $("img").toArray();
+  await Promise.all(
+    imgElements.map(async (imgElement) => {
+      const img = $(imgElement);
+      let src = img.attr("src");
 
-  // Prepend root URL to <img> src paths
-  $("img").each((i, el) => {
-    const src = $(el).attr("src");
-    if (src.startsWith("/")) {
-      $(el).attr("src", `${rootUrl}${src}`);
-    }
-  });
+      // Check if src is a relative URL and update it
+      if (src.startsWith("/")) {
+        src = `${rootUrl}${src}`;
+        img.attr("src", src);
+      }
+
+      const alt = img.attr("alt") || "";
+
+      // const newImageId = downloadAndUploadToWP(src, wpConfig)
+      //   .then((response) => console.log("Upload successful:", response))
+      //   .catch((error) => console.error("🚨 Error:", error));
+
+      // Upload the image to WordPress
+      // const newImageId = await uploadMedia(src);
+      // if (newImageId) {
+      //   const newImageUrl = `${process.env.WP_API_BASE_URL}wp-content/uploads/${newImageId}`;
+      //   img.attr("src", newImageUrl);
+      // }
+
+      // Create the new HTML structure
+      const wrappedImage = `
+<!-- wp:image -->
+<figure class="wp-block-image"><img src="${img.attr(
+        "src"
+      )}" alt="${alt}"/></figure>
+<!-- /wp:image -->
+`;
+
+      // Replace the img tag with the new structure
+      img.replaceWith(wrappedImage);
+    })
+  );
 
   // Handle <form> tags
   $("form").each((i, el) => {
@@ -108,42 +237,54 @@ function cleanHtmlContent(contentHtml, url) {
 
   // Wrap <table> tags in WordPress table blocks
   $("table").each((i, el) => {
-    $(el)
-      .before('<!-- wp:table -->\n<figure class="wp-block-table">\n')
-      .after("\n</figure>\n<!-- /wp:table -->");
+    const $table = $(el);
+    const $caption = $table.find("caption");
+    let captionText = "";
+    // remove any classes on the table
+    $table.removeAttr("class");
+
+    if ($caption.length) {
+      captionText = $caption.text().trim();
+      $caption.remove();
+    }
+
+    $table.wrap('<figure class="wp-block-table"></figure>');
+    if (captionText) {
+      $table.after(
+        `\n<figcaption class="wp-element-caption">${captionText}</figcaption>`
+      );
+    }
+
+    $table.parent().before("<!-- wp:table -->");
+    $table.parent().after("<!-- /wp:table -->");
   });
 
   // Adjust <td> tags and <caption> in tables
   $('td[scope="row"]').removeAttr("scope");
-  $("caption").each((i, el) => {
-    const text = $(el).html().trim();
-    $(el).replaceWith(
-      `<figcaption class="wp-element-caption">${text}</figcaption>`
-    );
-  });
-
-  // Ensure <figcaption> is placed correctly after <table>
-  $("table").each((i, el) => {
-    const figcaption = $(el).siblings("figcaption");
-    if (figcaption.length) {
-      $(el).after(figcaption);
-    }
-  });
 
   // Select all <div> and <article> elements and replace them with their inner HTML
   $("article").each((i, el) => {
     const innerContent = $(el).html(); // Get the inner HTML of the element
     $(el).replaceWith(innerContent); // Replace the element with its content
   });
-  $("div")
-    .toArray()
-    .forEach((el) => {
-      const innerContent = $(el).html(); // Get the inner HTML of the element
-      $(el).replaceWith(innerContent); // Replace the element with its content
-    });
+  // Find all divs and replace them with their contents
+  $("div").each(function () {
+    $(this).replaceWith($(this).contents());
+  });
+
+  // find all <hr> and replace them with a separator block
+  $("hr").each(function () {
+    const replacedHTML = `
+        <!-- wp:separator -->
+        <hr class="wp-block-separator has-alpha-channel-opacity"/>
+        <!-- /wp:separator -->
+        `;
+    $(this).replaceWith(replacedHTML);
+  });
 
   // Return the cleaned HTML
-  return $.html()
+  return $("body")
+    .html()
     .replace(/^\s*[\r\n]/gm, "")
     .replace(/^\s+/gm, "");
 }
