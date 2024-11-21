@@ -109,6 +109,43 @@ async function transformToWPBlocks(contentHtml, url) {
     $(el).replaceWith(transformedContent);
   });
 
+  $("img").each((i, el) => {
+    console.log("🚀 ~ $ ~ el:", el);
+    let src = $(el).attr("src");
+    const alt = $(el).attr("alt") || "";
+    const title = $(el).attr("title") || "";
+    const caption = $(el).attr("data-caption") || "";
+
+    // Check if src is a relative URL and update it
+    if (src.startsWith("/")) {
+      src = `${rootUrl}${src}`;
+    }
+
+    let imageBlock = `<!-- wp:image {"sizeSlug":"full","linkDestination":"none"} -->
+  <figure class="wp-block-image size-full">
+  <img src="${src}" alt="${alt}"`;
+
+    if (title) {
+      imageBlock += ` title="${title}"`;
+    }
+
+    imageBlock += " />";
+
+    if (caption) {
+      imageBlock += `\n<figcaption>${caption}</figcaption>`;
+    }
+
+    imageBlock += "\n</figure>\n<!-- /wp:image -->\n";
+
+    // Replace the entire parent <p> tag if it only contains the image
+    const $parent = $(el).parent("p");
+    if ($parent.length && $parent.contents().length === 1) {
+      $parent.replaceWith(imageBlock);
+    } else {
+      $(el).replaceWith(imageBlock);
+    }
+  });
+
   // Remove <article>, <section>, and <div> tags
   $("article, section, div").each((i, el) => {
     $(el).replaceWith($(el).html());
@@ -166,33 +203,33 @@ async function transformToWPBlocks(contentHtml, url) {
   });
 
   // Prepend root URL to <img> src paths and upload images to WordPress
-  const imgElements = $("img").toArray();
-  await Promise.all(
-    imgElements.map(async (imgElement) => {
-      const img = $(imgElement);
-      let src = img.attr("src");
+  //   const imgElements = $("img").toArray();
+  //   await Promise.all(
+  //     imgElements.map(async (imgElement) => {
+  //       const img = $(imgElement);
+  //       let src = img.attr("src");
 
-      // Check if src is a relative URL and update it
-      if (src.startsWith("/")) {
-        src = `${rootUrl}${src}`;
-        img.attr("src", src);
-      }
+  //       // Check if src is a relative URL and update it
+  //       if (src.startsWith("/")) {
+  //         src = `${rootUrl}${src}`;
+  //         img.attr("src", src);
+  //       }
 
-      const alt = img.attr("alt") || "";
+  //       const alt = img.attr("alt") || "";
 
-      // Create the new HTML structure
-      const wrappedImage = `
-<!-- wp:image -->
-<figure class="wp-block-image"><img src="${img.attr(
-        "src"
-      )}" alt="${alt}"/></figure>
-<!-- /wp:image -->
-`;
+  //       // Create the new HTML structure
+  //       const wrappedImage = `
+  // <!-- wp:image -->
+  // <figure class="wp-block-image"><img src="${img.attr(
+  //         "src"
+  //       )}" alt="${alt}"/></figure>
+  // <!-- /wp:image -->
+  // `;
 
-      // Replace the img tag with the new structure
-      img.replaceWith(wrappedImage);
-    })
-  );
+  //       // Replace the img tag with the new structure
+  //       img.replaceWith(wrappedImage);
+  //     })
+  //   );
 
   // Handle <form> tags
   $("form").each((i, el) => {
