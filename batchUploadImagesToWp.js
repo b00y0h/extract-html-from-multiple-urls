@@ -1,10 +1,23 @@
-const axios = require("axios");
-const FormData = require("form-data");
+const WPAPI = require("wpapi");
 const fs = require("fs");
 const path = require("path");
 const { exec } = require("child_process");
 
 async function batchUploadImagesToWP(imageUrls) {
+  // Initialize WordPress API
+  const wp = new WPAPI({
+    endpoint: `${process.env.WP_API_BASE_URL}wp-json`,
+    username: process.env.WP_API_USERNAME,
+    password: process.env.WP_API_PASSWORD,
+    auth: true,
+  });
+
+  // Set the User-Agent header
+  wp.setHeaders({
+    "User-Agent":
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36",
+  });
+
   const downloadFile = async (imageUrl) => {
     const fileName = path.basename(imageUrl);
     const filePath = path.join(process.cwd(), fileName);
@@ -39,34 +52,37 @@ async function batchUploadImagesToWP(imageUrls) {
     });
   };
 
-  const uploadToWordPress = async (filePath, originalUrl) => {
+  const uploadToWordPress = async (filePath, originalUrl, postId = null) => {
     try {
       const fileName = path.basename(filePath);
-      let data = new FormData();
-      data.append("file", fs.createReadStream(filePath));
-      const auth = {
-        username: process.env.WP_API_USERNAME,
-        password: process.env.WP_API_PASSWORD,
-      };
-      let config = {
-        method: "post",
-        url: `${process.env.WP_API_BASE_URL}wp-json/wp/v2/media/`,
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36",
-          ...data.getHeaders(),
-        },
-        auth: auth,
-        data: data,
-      };
 
       console.log(`Uploading ${fileName} to WordPress...`);
 
-      // Create custom axios instance to prevent default headers
-      const instance = axios.create();
-      instance.defaults.headers.common = {};
+      const response = await wp
+        .media()
+        .file(filePath) // Use the file path directly
+        .create({
+          title: fileName,
+          alt_text: `Image from ${originalUrl}`,
+          caption: "",
+          description: `Image originally from: ${originalUrl}`,
+        });
 
-      const response = await instance.request(config);
+      console.log("Initial upload complete, updating metadata...");
+
+      // Update the media with additional metadata
+      const updatedMedia = await wp
+        .media()
+        .id(response.id)
+        .update({
+          alt_text: `Image from ${originalUrl}`,
+          description: `Image originally from: ${originalUrl}`,
+        });
+
+      // Add post association if postId is provided
+      if (postId) {
+        updateData.post = postId;
+      }
 
       // Clean up the downloaded file
       fs.unlinkSync(filePath);
@@ -74,13 +90,15 @@ async function batchUploadImagesToWP(imageUrls) {
       return {
         originalUrl: originalUrl,
         originalName: fileName,
-        wordpressUrl: response.data.guid.rendered,
-        mediaId: response.data.id,
+        wordpressUrl: updatedMedia.source_url,
+        mediaId: updatedMedia.id,
+        postId: updatedMedia.post || null,
       };
     } catch (error) {
       console.error(`Upload error for ${filePath}:`, {
         message: error.message,
-        status: error.response?.status,
+        code: error.code,
+        data: error.data,
       });
       throw error;
     }
