@@ -93,6 +93,15 @@ async function transformToWPBlocks(contentHtml, url) {
   // Remove empty <div> tags
   $("div:empty").remove();
 
+  // Handle <iframe> tags
+  $("iframe").each((i, el) => {
+    const src = $(el).attr("src");
+    if (!src.includes("https://www.youtube.com/embed")) {
+      $(el).replaceWith(
+        `<h2>🫥🫥<br />iFrame found and needs updating: <br />${src}<br />🫥🫥🫥</h2>`
+      );
+    }
+  });
   // Replace <span> tags but keep their content
   $("span").each((i, el) => {
     $(el).replaceWith($(el).html());
@@ -110,7 +119,6 @@ async function transformToWPBlocks(contentHtml, url) {
   });
 
   $("img").each((i, el) => {
-    console.log("🚀 ~ $ ~ el:", el);
     let src = $(el).attr("src");
     const alt = $(el).attr("alt") || "";
     const title = $(el).attr("title") || "";
@@ -146,19 +154,21 @@ async function transformToWPBlocks(contentHtml, url) {
     }
   });
 
+  $("blockquote").each(() => {
+    $(this).replaceWith(
+      `<!-- wp:quote -->
+      <blockquote class="wp-block-quote">
+      <!-- wp:paragraph -->
+      <p>${$(this).html()}</p>
+      <!-- /wp:paragraph -->
+      </blockquote>
+      <!-- /wp:quote -->`
+    );
+  });
+
   // Remove <article>, <section>, and <div> tags
   $("article, section, div").each((i, el) => {
     $(el).replaceWith($(el).html());
-  });
-
-  // Handle <iframe> tags
-  $("iframe").each((i, el) => {
-    const src = $(el).attr("src");
-    if (!src.includes("https://www.youtube.com/embed")) {
-      $(el).replaceWith(
-        `<h1>🫥🫥<br />iFrame found and needs updating: <br />${src}<br />🫥🫥🫥</h1>`
-      );
-    }
   });
 
   // Wrap <p> tags in WordPress paragraph blocks
@@ -235,7 +245,7 @@ async function transformToWPBlocks(contentHtml, url) {
   $("form").each((i, el) => {
     const action = $(el).attr("action");
     $(el).replaceWith(
-      `<h1>🚨🚨🚨<br />Form found and needs updating: <br />${action}<br />🚨🚨🚨</h1>`
+      `<h2>🚨🚨🚨<br />Form found and needs updating: <br />${action}<br />${rootUrl}<br />🚨🚨🚨</h2>`
     );
   });
 

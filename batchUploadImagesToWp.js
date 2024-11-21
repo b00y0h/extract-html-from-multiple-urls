@@ -21,14 +21,14 @@ async function batchUploadImagesToWP(imageUrls) {
   const downloadFile = async (imageUrl) => {
     const fileName = path.basename(imageUrl);
     const filePath = path.join(process.cwd(), fileName);
-    console.log("Starting download for URL:", imageUrl);
-    console.log("Saving to path:", filePath);
+    // console.log("Starting download for URL:", imageUrl);
+    // console.log("Saving to path:", filePath);
 
     return new Promise((resolve, reject) => {
       if (fs.existsSync(filePath)) {
         try {
           fs.unlinkSync(filePath);
-          console.log(`Deleted existing file: ${filePath}`);
+          // console.log(`Deleted existing file: ${filePath}`);
         } catch (err) {
           console.error(`Error deleting existing file: ${err}`);
         }
@@ -63,7 +63,8 @@ async function batchUploadImagesToWP(imageUrls) {
         .file(filePath) // Use the file path directly
         .create({
           title: fileName,
-          alt_text: image.alt,
+          alt_text:
+            image.alt || `No alt text. Image originally from: ${image.url}`,
           caption: "",
           description: `Image originally from: ${image.url}`,
         });
@@ -99,13 +100,13 @@ async function batchUploadImagesToWP(imageUrls) {
 
   for (const image of imageUrls) {
     try {
-      console.log(`\n--- Processing image: ${image} ---`);
+      // console.log(`\n--- Processing image: ${image.url} ---`);
       const filePath = await downloadFile(image.url);
-      console.log(`Successfully downloaded to: ${filePath}`);
+      // console.log(`Successfully downloaded to: ${filePath}`);
       const uploadResult = await uploadToWordPress(filePath, image);
-      console.log(
-        `Successfully uploaded to WordPress: ${uploadResult.wordpressUrl}`
-      );
+      // console.log(
+      //   `Successfully uploaded to WordPress: ${uploadResult.wordpressUrl}`
+      // );
       results.push(uploadResult);
     } catch (error) {
       console.error(`Error processing ${image.url}:`, error);
