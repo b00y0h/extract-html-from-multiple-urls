@@ -52,7 +52,7 @@ async function batchUploadImagesToWP(imageUrls) {
     });
   };
 
-  const uploadToWordPress = async (filePath, originalUrl, postId = null) => {
+  const uploadToWordPress = async (filePath, image, postId = null) => {
     try {
       const fileName = path.basename(filePath);
 
@@ -63,20 +63,9 @@ async function batchUploadImagesToWP(imageUrls) {
         .file(filePath) // Use the file path directly
         .create({
           title: fileName,
-          alt_text: `Image from ${originalUrl}`,
+          alt_text: image.alt,
           caption: "",
-          description: `Image originally from: ${originalUrl}`,
-        });
-
-      console.log("Initial upload complete, updating metadata...");
-
-      // Update the media with additional metadata
-      const updatedMedia = await wp
-        .media()
-        .id(response.id)
-        .update({
-          alt_text: `Image from ${originalUrl}`,
-          description: `Image originally from: ${originalUrl}`,
+          description: `Image originally from: ${image.url}`,
         });
 
       // Add post association if postId is provided
@@ -88,11 +77,12 @@ async function batchUploadImagesToWP(imageUrls) {
       fs.unlinkSync(filePath);
 
       return {
-        originalUrl: originalUrl,
+        image: image.url,
+        originalUrl: image.url,
         originalName: fileName,
-        wordpressUrl: updatedMedia.source_url,
-        mediaId: updatedMedia.id,
-        postId: updatedMedia.post || null,
+        wordpressUrl: response.source_url,
+        mediaId: response.id,
+        postId: response.post || null,
       };
     } catch (error) {
       console.error(`Upload error for ${filePath}:`, {
@@ -107,20 +97,20 @@ async function batchUploadImagesToWP(imageUrls) {
   const results = [];
   const errors = [];
 
-  for (const imageUrl of imageUrls) {
+  for (const image of imageUrls) {
     try {
-      console.log(`\n--- Processing image: ${imageUrl} ---`);
-      const filePath = await downloadFile(imageUrl);
+      console.log(`\n--- Processing image: ${image} ---`);
+      const filePath = await downloadFile(image.url);
       console.log(`Successfully downloaded to: ${filePath}`);
-      const uploadResult = await uploadToWordPress(filePath, imageUrl);
+      const uploadResult = await uploadToWordPress(filePath, image);
       console.log(
         `Successfully uploaded to WordPress: ${uploadResult.wordpressUrl}`
       );
       results.push(uploadResult);
     } catch (error) {
-      console.error(`Error processing ${imageUrl}:`, error);
+      console.error(`Error processing ${image.url}:`, error);
       errors.push({
-        url: imageUrl,
+        url: image.url,
         error: error.message,
       });
     }

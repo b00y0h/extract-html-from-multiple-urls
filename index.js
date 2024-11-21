@@ -119,8 +119,9 @@ async function processContent(contentResponse, url, currentUrl, totalUrls) {
     // grab all the image urls out of the contentHtml
     content$("img").each((i, el) => {
       const imageUrl = content$(el).attr("src");
+      const imageAlt = content$(el).attr("alt");
       if (imageUrl) {
-        imageUrls.push(imageUrl);
+        imageUrls.push({ url: imageUrl, alt: imageAlt });
       }
     });
 

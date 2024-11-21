@@ -20,7 +20,6 @@ const wpConfig = {
   username: process.env.WP_API_USERNAME,
   password: process.env.WP_API_PASSWORD,
 };
-console.log("🚀 ~ wpConfig:", wpConfig);
 // Process the content of a URL and save it to a file
 async function postToWordPress(post) {
   const { title, meta, slug, images } = post;

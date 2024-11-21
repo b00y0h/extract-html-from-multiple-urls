@@ -1,11 +1,6 @@
 require("dotenv").config();
 const cheerio = require("cheerio");
 
-const wpConfig = {
-  endpoint: process.env.WP_API_BASE_URL,
-  username: process.env.WP_API_USERNAME,
-  password: process.env.WP_API_USERNAME,
-};
 function transformColumnsToWpBlocks(content) {
   // console.log("⭐��⭐ ~ transformColumnsToWpBlocks ~ content:", content);
   const $ = cheerio.load(content);
