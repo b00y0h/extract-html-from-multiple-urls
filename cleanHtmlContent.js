@@ -68,7 +68,7 @@ function getRootUrl(url) {
 }
 
 // Clean and transform HTML content for further processing
-async function cleanHtmlContent(contentHtml, url) {
+async function transformToWPBlocks(contentHtml, url) {
   const $ = cheerio.load(contentHtml);
   const rootUrl = getRootUrl(url);
 
@@ -185,17 +185,6 @@ async function cleanHtmlContent(contentHtml, url) {
 
       const alt = img.attr("alt") || "";
 
-      // const newImageId = downloadAndUploadToWP(src, wpConfig)
-      //   .then((response) => console.log("Upload successful:", response))
-      //   .catch((error) => console.error("🚨 Error:", error));
-
-      // Upload the image to WordPress
-      // const newImageId = await uploadMedia(src);
-      // if (newImageId) {
-      //   const newImageUrl = `${process.env.WP_API_BASE_URL}wp-content/uploads/${newImageId}`;
-      //   img.attr("src", newImageUrl);
-      // }
-
       // Create the new HTML structure
       const wrappedImage = `
 <!-- wp:image -->
@@ -283,10 +272,12 @@ async function cleanHtmlContent(contentHtml, url) {
   });
 
   // Return the cleaned HTML
-  return $("body")
-    .html()
-    .replace(/^\s*[\r\n]/gm, "")
-    .replace(/^\s+/gm, "");
+  return Promise.resolve(
+    $("body")
+      .html()
+      .replace(/^\s*[\r\n]/gm, "")
+      .replace(/^\s+/gm, "")
+  );
 }
 
-module.exports = { cleanHtmlContent };
+module.exports = { transformToWPBlocks };

@@ -1,6 +1,7 @@
 require("dotenv").config();
 const fs = require("fs");
 const axios = require("axios");
+const { batchUploadImagesToWP } = require("./batchUploadImagesToWp");
 
 const WP_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36";
@@ -14,10 +15,26 @@ function logMessage(message) {
   fs.appendFileSync(LOG_FILE, `[${timestamp}] ${message}\n`);
 }
 
+const wpConfig = {
+  endpoint: `${WP_API_BASE_URL}wp-json`,
+  username: process.env.WP_API_USERNAME,
+  password: process.env.WP_API_PASSWORD,
+};
+console.log("🚀 ~ wpConfig:", wpConfig);
 // Process the content of a URL and save it to a file
 async function postToWordPress(post) {
-  const { content, title, meta, slug } = post;
+  const { title, meta, slug, images } = post;
+  let { content } = post; // Destructure content separately so we can modify it
+
   try {
+    // Upload images to WordPress
+    const uploadedImages = await batchUploadImagesToWP(images, wpConfig);
+
+    // Replace image URLs in content
+    uploadedImages.forEach((img) => {
+      content = content.replace(img.originalUrl, img.wordpressUrl);
+    });
+
     const postData = {
       title,
       content,

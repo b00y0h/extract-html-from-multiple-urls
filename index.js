@@ -9,7 +9,7 @@ const {
   updateParentPage,
   getParentPageSlug,
 } = require("./postToWordpress");
-const { cleanHtmlContent } = require("./cleanHtmlContent");
+const { transformToWPBlocks } = require("./cleanHtmlContent");
 
 // Load environment variables from a .env file if present
 require("dotenv").config();
@@ -105,14 +105,30 @@ async function processContent(contentResponse, url, currentUrl, totalUrls) {
   const sections = $('div[role="main"] > div.row > section')
     .map((i, el) => $(el).html())
     .get();
+  let imageUrls = [];
 
   if (sections.length) {
+    // join the sections
     const contentHtml = sections.join("\n");
-    const cleanedContent = await cleanHtmlContent(contentHtml, url);
+
+    // transform the content to WP blocks
+    const transformedToWPContent = await transformToWPBlocks(contentHtml, url);
+
+    const content$ = cheerio.load(transformedToWPContent);
+
+    // grab all the image urls out of the contentHtml
+    content$("img").each((i, el) => {
+      const imageUrl = content$(el).attr("src");
+      if (imageUrl) {
+        imageUrls.push(imageUrl);
+      }
+    });
+
+    // Save the content to a file
     const directoryPath = createDirectoriesFromUrl(url);
     const sanitizedFileName = sanitizeFileName(url) + ".txt";
     const filePath = path.join(directoryPath, sanitizedFileName);
-    fs.writeFileSync(filePath, cleanedContent);
+    fs.writeFileSync(filePath, transformedToWPContent);
     console.log(`Finished: ${currentUrl} of ${totalUrls}: ✅ : ${url}`);
     logMessage(
       `Successfully processed: ${url} - Status: ${contentResponse.status}`
@@ -132,12 +148,13 @@ async function processContent(contentResponse, url, currentUrl, totalUrls) {
 
     const post = {
       title: pageTitle,
-      content: cleanedContent,
+      content: transformedToWPContent,
       status: "publish",
       meta: {
         description: metaDescription,
       },
       slug: slug,
+      images: imageUrls,
     };
 
     // let pageId = null;
@@ -189,10 +206,6 @@ async function fetchUrl(url, currentUrl, totalUrls) {
       logMessage(
         `Error response for URL ${url}: Status: ${error.response.status}`
       );
-
-      // console.error(
-      //   `🔍 Response headers: ${JSON.stringify(error.response.headers)}`
-      // );
     }
     return { url, pageId: null };
   }
