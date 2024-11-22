@@ -8,8 +8,8 @@ const {
   postToWordPress,
   updateParentPage,
   getParentPageSlug,
-} = require("./postToWordpress");
-const { transformToWPBlocks } = require("./cleanHtmlContent");
+} = require("./src/postToWordpress");
+const { transformToWPBlocks } = require("./src/cleanHtmlContent");
 
 // Load environment variables from a .env file if present
 require("dotenv").config();

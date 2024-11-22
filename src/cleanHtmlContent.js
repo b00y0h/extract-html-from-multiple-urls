@@ -212,35 +212,6 @@ async function transformToWPBlocks(contentHtml, url) {
     );
   });
 
-  // Prepend root URL to <img> src paths and upload images to WordPress
-  //   const imgElements = $("img").toArray();
-  //   await Promise.all(
-  //     imgElements.map(async (imgElement) => {
-  //       const img = $(imgElement);
-  //       let src = img.attr("src");
-
-  //       // Check if src is a relative URL and update it
-  //       if (src.startsWith("/")) {
-  //         src = `${rootUrl}${src}`;
-  //         img.attr("src", src);
-  //       }
-
-  //       const alt = img.attr("alt") || "";
-
-  //       // Create the new HTML structure
-  //       const wrappedImage = `
-  // <!-- wp:image -->
-  // <figure class="wp-block-image"><img src="${img.attr(
-  //         "src"
-  //       )}" alt="${alt}"/></figure>
-  // <!-- /wp:image -->
-  // `;
-
-  //       // Replace the img tag with the new structure
-  //       img.replaceWith(wrappedImage);
-  //     })
-  //   );
-
   // Handle <form> tags
   $("form").each((i, el) => {
     const action = $(el).attr("action");
