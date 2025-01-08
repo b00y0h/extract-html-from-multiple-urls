@@ -179,22 +179,27 @@ async function findPageBySlug(slug) {
     // Remove trailing slash if present
     slug = slug.replace(/\/$/, "");
 
-    // If the slug is empty, it means it's the root URL
     if (!slug) {
-      console.log("Root URL detected, skipping slug check.");
+      console.log("🌱 Root URL detected, skipping slug check.");
       return null;
     }
+
+    const pathSegments = slug.split("/");
+    const searchSlug = pathSegments[pathSegments.length - 1];
 
     const auth = {
       username: process.env.WP_API_USERNAME,
       password: process.env.WP_API_PASSWORD,
     };
 
-    console.log(`Searching for page with slug: ${slug}`);
+    console.log(`\n🔍 SEARCH START -----------------------------`);
+    console.log(`📂 Full path: ${slug}`);
+    console.log(`🎯 Searching for: ${searchSlug}`);
+    console.log(`📚 Path segments:`, pathSegments);
 
     const response = await axios.get(`${WP_API_BASE_URL}wp-json/wp/v2/pages`, {
       params: {
-        slug: slug,
+        slug: searchSlug,
         per_page: 1,
       },
       headers: {
@@ -204,15 +209,46 @@ async function findPageBySlug(slug) {
     });
 
     if (response.data && response.data.length > 0) {
-      console.log(
-        `Found page with ID: ${response.data[0].id} for slug: ${slug}`
-      );
-      return response.data[0].id;
+      const foundPage = response.data[0];
+      console.log(`✅ Found page ID: ${foundPage.id} for: ${searchSlug}`);
+      console.log(`👆 Page's parent ID: ${foundPage.parent || "none"}`);
+
+      if (pathSegments.length > 1) {
+        const parentSlug = pathSegments[pathSegments.length - 2];
+        console.log(`👀 Looking for parent: ${parentSlug}`);
+
+        if (foundPage.parent) {
+          const parentResponse = await axios.get(
+            `${WP_API_BASE_URL}wp-json/wp/v2/pages/${foundPage.parent}`,
+            {
+              headers: {
+                "User-Agent": WP_USER_AGENT,
+              },
+              auth: auth,
+            }
+          );
+
+          console.log(`📌 Found parent slug: ${parentResponse.data.slug}`);
+          console.log(`🎯 Expected parent: ${parentSlug}`);
+
+          if (parentResponse.data.slug === parentSlug) {
+            console.log(`✅ Parent match confirmed!`);
+            return foundPage.id;
+          } else {
+            console.log(`❌ Parent mismatch`);
+          }
+        } else {
+          console.log(`⚠️ Page has no parent`);
+        }
+      } else {
+        return foundPage.id;
+      }
     }
-    console.log(`No page found for slug: ${slug}`);
+    console.log(`❌ No page found for: ${searchSlug}`);
+    console.log(`🔍 SEARCH END -------------------------------\n`);
     return null;
   } catch (error) {
-    console.error(`Error finding page by slug ${slug}:`, error.message);
+    console.error(`💥 Error finding page ${slug}:`, error.message);
     return null;
   }
 }

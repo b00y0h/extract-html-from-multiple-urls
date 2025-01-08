@@ -121,26 +121,46 @@ async function processContent(
   currentUrl,
   totalUrls
 ) {
+  console.log(`\n🔄 CONTENT PROCESSING START ---------------------`);
+  console.log(`📝 Processing content for: ${computedUrl}`);
+
   const $ = cheerio.load(contentResponse.data);
+
+  // Log the HTML structure we're trying to parse
+  console.log(
+    `🔍 Looking for sections with selector: div[role="main"] > div.row > section`
+  );
+
+  // Log the full HTML structure for debugging
+  console.log(`📄 Page HTML structure:`);
+  console.log($("body").html().substring(0, 500) + "...");
 
   const sections = $('div[role="main"] > div.row > section')
     .map((i, el) => $(el).html())
     .get();
+
+  console.log(`📊 Found ${sections.length} sections`);
   let imageUrls = [];
 
   if (sections.length) {
+    console.log(`✅ Found content sections, proceeding with processing`);
+
     // join the sections
     const contentHtml = sections.join("\n");
+    console.log(`📦 Combined section length: ${contentHtml.length} characters`);
 
     // transform the content to WP blocks using the original URL
+    console.log(`🔄 Transforming content to WP blocks...`);
     const transformedToWPContent = await transformToWPBlocks(
       contentHtml,
       originalUrl
     );
+    console.log(`✅ Content transformed`);
 
     const content$ = cheerio.load(transformedToWPContent);
 
     // grab all the image urls out of the contentHtml
+    console.log(`🖼️  Scanning for images...`);
     content$("img").each((i, el) => {
       const imageUrl = content$(el).attr("src");
       const imageAlt = content$(el).attr("alt");
@@ -148,35 +168,45 @@ async function processContent(
         imageUrls.push({ url: imageUrl, alt: imageAlt });
       }
     });
+    console.log(`📸 Found ${imageUrls.length} images`);
 
     // Save the content to a file
+    console.log(`💾 Saving content to file...`);
     const directoryPath = createDirectoriesFromUrl(computedUrl);
     const sanitizedFileName = sanitizeFileName(computedUrl) + ".txt";
     const filePath = path.join(directoryPath, sanitizedFileName);
     fs.writeFileSync(filePath, transformedToWPContent);
+    console.log(`✅ Content saved to: ${filePath}`);
+
     console.log(`Finished: ${currentUrl} of ${totalUrls}: ✅ : ${computedUrl}`);
     logMessage(
       `Successfully processed: ${computedUrl} - Status: ${contentResponse.status}`
     );
 
-    // Extract the page title and get text up until the first `-`
+    // Extract the page title
+    console.log(`📑 Extracting page metadata...`);
     let pageTitle = $("title").text().trim();
+    console.log(`📌 Original title: ${pageTitle}`);
     if (pageTitle.includes(" - ")) {
       pageTitle = pageTitle.split(" - ")[0].trim();
     }
     pageTitle = pageTitle || `Page ${currentUrl}`;
+    console.log(`📌 Final title: ${pageTitle}`);
 
     // Extract the page meta description
     const metaDescription = $('meta[name="description"]').attr("content");
+    console.log(`📝 Meta description: ${metaDescription || "None found"}`);
 
-    // Clean up the slug from computedUrl
+    // Clean up the slug
+    console.log(`🔧 Processing slug...`);
     let slug = computedUrl
       .replace(/^vancouver\.wsu\.edu\//, "") // Remove domain
       .replace(/\/$/, ""); // Remove trailing slash
 
-    // Ensure we don't have any duplicate path segments
+    // Ensure we don't have duplicate path segments
     const pathSegments = [...new Set(slug.split("/"))];
     slug = pathSegments.join("/");
+    console.log(`🏷️  Final slug: ${slug}`);
 
     const post = {
       title: pageTitle,
@@ -185,28 +215,107 @@ async function processContent(
       meta: {
         description: metaDescription,
       },
-      // Use the full path from computedUrl for the slug
       slug: slug,
       images: imageUrls,
     };
 
-    // let pageId = null;
-    // Post the content to the WordPress API
+    console.log(`📤 Sending to WordPress...`);
     const pageId = await postToWordPress(post);
 
+    if (pageId) {
+      console.log(`✨ Successfully created WordPress page with ID: ${pageId}`);
+    } else {
+      console.log(`❌ Failed to create WordPress page`);
+    }
+
+    console.log(`🔄 CONTENT PROCESSING END ---------------------\n`);
     return { url: computedUrl, pageId };
   } else {
+    console.log(
+      `❌ No sections found in HTML. Trying alternative selectors...`
+    );
+
+    // Try alternative selectors
+    const mainContent =
+      $("main").html() || $("article").html() || $(".content").html();
+    if (mainContent) {
+      console.log(`✅ Found content with alternative selector`);
+      // Process this content instead
+      // ... (you could add logic here to process alternative content)
+    }
+
     console.log(
       `Finished: ${currentUrl} of ${totalUrls}: ❌ (No section found): ${computedUrl}`
     );
     logMessage(
       `No section found for: ${computedUrl} - Status: ${contentResponse.status}`
     );
+    console.log(
+      `🔄 CONTENT PROCESSING END (NO CONTENT) ---------------------\n`
+    );
     return { url: computedUrl, pageId: null };
   }
 }
 
-// Fetch and process a single URL
+// Function to sort URLs by hierarchy depth
+function sortUrlsByHierarchy(urls) {
+  const sortedUrls = urls.sort((a, b) => {
+    const getDepth = (url) => {
+      const path = url.replace(
+        /^(?:https?:\/\/)?(?:www\.)?vancouver\.wsu\.edu\//,
+        ""
+      );
+      return (path.match(/\//g) || []).length;
+    };
+    return getDepth(a.computedUrl) - getDepth(b.computedUrl);
+  });
+
+  console.log("\n📋 Planned Processing Order:");
+  sortedUrls.forEach((url, index) => {
+    const depth = url.computedUrl.split("/").filter(Boolean).length - 1;
+    console.log(`${index + 1}. ${"  ".repeat(depth)}${url.computedUrl}`);
+  });
+  console.log("\n");
+
+  return sortedUrls;
+}
+
+// Add this function to verify parent exists before processing
+async function verifyParentHierarchy(url) {
+  const pathSegments = url
+    .replace(/^(?:https?:\/\/)?(?:www\.)?vancouver\.wsu\.edu\//, "")
+    .split("/")
+    .filter(Boolean);
+
+  console.log(`\n🔍 HIERARCHY CHECK START ---------------------`);
+  console.log(`📍 Checking hierarchy for: ${url}`);
+  console.log(`📚 Path segments:`, pathSegments);
+  console.log(`📏 Segment count: ${pathSegments.length}`);
+
+  // If this is a root page, no verification needed
+  if (pathSegments.length <= 1) {
+    console.log(`🌱 Root-level page, no parent check needed`);
+    console.log(`🔍 HIERARCHY CHECK END ---------------------\n`);
+    return true;
+  }
+
+  // Only check up to the immediate parent
+  const parentPath = pathSegments.slice(0, -1).join("/");
+  console.log(`👆 Checking immediate parent: ${parentPath}`);
+
+  const parentId = await findPageBySlug(parentPath);
+  if (!parentId) {
+    console.log(`❌ Parent not found: ${parentPath}`);
+    console.log(`🔍 HIERARCHY CHECK END ---------------------\n`);
+    return false;
+  }
+
+  console.log(`✅ Parent exists with ID: ${parentId}`);
+  console.log(`🔍 HIERARCHY CHECK END ---------------------\n`);
+  return true;
+}
+
+// Complete fetchUrl function with hierarchy verification
 async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
   try {
     // Ensure the URLs have the correct protocol
@@ -216,55 +325,74 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     // Determine the target URL, following redirects if necessary
     const targetUrl = originalUrl;
 
-    // Check if the parent pages exist
-    // Check if the parent pages exist
+    // Add the debug section here, after protocol checks but before any processing
+    console.log("\n🔍 URL ANALYSIS -------------------------");
+    console.log("Original URL:", originalUrl);
+    console.log("Computed URL:", computedUrl);
+    console.log("URL components:");
+    console.log("- Protocol:", new URL(computedUrl).protocol);
+    console.log("- Host:", new URL(computedUrl).host);
+    console.log("- Pathname:", new URL(computedUrl).pathname);
+    console.log(
+      "- Encoded pathname:",
+      encodeURIComponent(new URL(computedUrl).pathname)
+    );
+    console.log("🔍 URL ANALYSIS END ---------------------\n");
+
+    console.log(`\n🚀 PROCESSING START -------------------------`);
+    console.log(`📍 Processing URL ${currentUrl} of ${totalUrls}`);
+    console.log(`🔗 Original URL: ${originalUrl}`);
+    console.log(`🎯 Computed URL: ${computedUrl}`);
+
+    // Get clean path segments
     const pathSegments = computedUrl
-      .replace(/^(?:https?:\/\/)?(?:www\.)?vancouver\.wsu\.edu\//, "") // Remove domain
+      .replace(/^(?:https?:\/\/)?(?:www\.)?vancouver\.wsu\.edu\//, "")
       .split("/")
       .filter(Boolean);
 
     const currentSlug = pathSegments[pathSegments.length - 1];
+    console.log(`📚 Path segments:`, pathSegments);
+    console.log(`🏷️  Current slug: ${currentSlug}`);
 
-    if (pathSegments.length > 1) {
-      const parentSlug = pathSegments.slice(0, -1).join("/");
-      console.log(`Checking for parent page: ${parentSlug}`);
-      const parentId = await findPageBySlug(parentSlug);
-
-      if (!parentId) {
-        console.log(
-          `Parent page "${parentSlug}" not found. Skipping creation of "${currentSlug}"`
-        );
-        logMessage(
-          `Skipped: ${currentSlug} - parent ${parentSlug} does not exist`
-        );
-        return { url: computedUrl, pageId: null };
-      }
-
-      console.log(
-        `Found parent page (ID: ${parentId}). Proceeding to scrape and create child page: ${currentSlug}`
-      );
-    } else {
-      console.log(`Creating root-level page: ${currentSlug}`);
+    // Verify entire parent hierarchy before proceeding
+    console.log(`🔍 Verifying parent hierarchy...`);
+    const hierarchyValid = await verifyParentHierarchy(computedUrl);
+    if (!hierarchyValid) {
+      console.log(`⚠️ Skipping ${computedUrl} - parent hierarchy incomplete`);
+      console.log(`🚀 PROCESSING END -------------------------\n`);
+      return { url: computedUrl, pageId: null };
     }
+    console.log(`✅ Parent hierarchy verified`);
 
     // Perform a GET request to fetch the content
+    console.log(`📥 Fetching content from: ${targetUrl}`);
     const contentResponse = await axios.get(targetUrl, {
       httpsAgent: new https.Agent({ rejectUnauthorized: false }),
     });
+    console.log(`✅ Content fetched successfully`);
 
     // Process the fetched content
-    return await processContent(
+    const result = await processContent(
       contentResponse,
       originalUrl,
       computedUrl,
       currentUrl,
       totalUrls
     );
+
+    if (result.pageId) {
+      console.log(`✨ Page created successfully with ID: ${result.pageId}`);
+    } else {
+      console.log(`⚠️  Page creation failed`);
+    }
+
+    console.log(`🚀 PROCESSING END -------------------------\n`);
+    return result;
   } catch (error) {
     // Log errors and append to the error file
     const errorMessage = `Error processing URL ${originalUrl}: ${error.message}`;
     fs.appendFileSync(ERROR_URL_FILE, `${errorMessage}\n`);
-    console.error(`❌ ${errorMessage}`);
+    console.error(`💥 ${errorMessage}`);
     logMessage(errorMessage);
 
     if (error.response) {
@@ -275,6 +403,7 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
       logMessage(responseDetails);
     }
 
+    console.log(`🚀 PROCESSING END (WITH ERROR) -------------------------\n`);
     return { url: computedUrl, pageId: null };
   }
 }
@@ -290,8 +419,18 @@ async function checkUrls() {
       process.exit(1);
     }
 
+    // Sort URLs by hierarchy
+    urls = sortUrlsByHierarchy(urls);
+
     // Limit the number of URLs to process
     urls = urls.slice(0, URL_PROCESS_LIMIT);
+
+    console.log("\n📊 URL Processing Order:");
+    urls.forEach((url, index) => {
+      const depth = (url.computedUrl.match(/\//g) || []).length;
+      console.log(`${index + 1}. ${"  ".repeat(depth)}${url.computedUrl}`);
+    });
+    console.log("\n");
 
     let currentUrl = 0;
     const totalUrls = urls.length;
@@ -370,9 +509,16 @@ async function checkUrls() {
       .readFileSync(ERROR_URL_FILE, "utf-8")
       .split("\n")
       .filter(Boolean).length;
+    const successfulPagesCount = results.filter(
+      (result) => result.pageId
+    ).length;
+
     console.log("\nReport generated:");
     console.log(`Total URLs processed: ${totalUrls}`);
     console.log(`URLs with Error: ${withErrorUrlCount}`);
+    console.log(
+      `Pages successfully created in WordPress: ${successfulPagesCount}`
+    );
     // Conditionally format the elapsed time
     if (elapsedMinutes > 0) {
       console.log(
