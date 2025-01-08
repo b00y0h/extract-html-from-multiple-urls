@@ -23,9 +23,14 @@ const wpConfig = {
 // Process the content of a URL and save it to a file
 async function postToWordPress(post) {
   const { title, meta, slug, images } = post;
-  let { content } = post; // Destructure content separately so we can modify it
+  let { content } = post;
 
   try {
+    // Clean the slug - remove domain and protocol
+    let cleanSlug = slug.replace(/^(?:https?:\/\/)?(?:www\.)?[^\/]+\//, "");
+    // Remove trailing slash if present
+    cleanSlug = cleanSlug.replace(/\/$/, "");
+
     // Upload images to WordPress
     const uploadedImages = await batchUploadImagesToWP(images, wpConfig);
 
@@ -34,36 +39,94 @@ async function postToWordPress(post) {
       content = content.replace(img.originalUrl, img.wordpressUrl);
     });
 
-    const postData = {
-      title,
-      content,
-      slug,
-      status: "publish",
-      meta: {
-        description: meta.description,
-      },
-    };
+    const pathSegments = cleanSlug.split("/").filter(Boolean);
+    const currentSlug = pathSegments[pathSegments.length - 1];
 
-    const auth = {
-      username: process.env.WP_API_USERNAME,
-      password: process.env.WP_API_PASSWORD,
-    };
+    // If this is not a root-level page, check for parent
+    if (pathSegments.length > 1) {
+      const parentSlug = pathSegments.slice(0, -1).join("/");
+      console.log(`Checking for parent page: ${parentSlug}`);
+      const parentId = await findPageBySlug(parentSlug);
 
-    const wpResponse = await axios.post(
-      `${WP_API_BASE_URL}wp-json/wp/v2/pages/`,
-      postData,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": WP_USER_AGENT,
-        },
-        auth: auth,
+      if (!parentId) {
+        console.log(
+          `Parent page "${parentSlug}" not found. Skipping creation of "${currentSlug}"`
+        );
+        logMessage(
+          `Skipped: ${currentSlug} - parent ${parentSlug} does not exist`
+        );
+        return null;
       }
-    );
 
-    console.log(`Successfully posted to WordPress: ${wpResponse.data.id}`);
-    logMessage(`Successfully posted to WordPress: ${wpResponse.data.id}`);
-    return wpResponse.data.id;
+      console.log(
+        `Found parent page (ID: ${parentId}). Creating child page: ${currentSlug}`
+      );
+
+      // Parent exists, create the child page
+      const postData = {
+        title,
+        content,
+        slug: currentSlug,
+        status: "publish",
+        parent: parentId,
+        meta: {
+          description: meta.description,
+        },
+      };
+
+      const wpResponse = await axios.post(
+        `${WP_API_BASE_URL}wp-json/wp/v2/pages/`,
+        postData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": WP_USER_AGENT,
+          },
+          auth: {
+            username: process.env.WP_API_USERNAME,
+            password: process.env.WP_API_PASSWORD,
+          },
+        }
+      );
+
+      console.log(`Successfully created child page: ${wpResponse.data.id}`);
+      logMessage(
+        `Created child page: ${currentSlug} under parent ${parentSlug}`
+      );
+      return wpResponse.data.id;
+    } else {
+      // This is a root-level page, create it
+      console.log(`Creating root-level page: ${currentSlug}`);
+
+      const postData = {
+        title,
+        content,
+        slug: currentSlug,
+        status: "publish",
+        meta: {
+          description: meta.description,
+        },
+      };
+
+      const wpResponse = await axios.post(
+        `${WP_API_BASE_URL}wp-json/wp/v2/pages/`,
+        postData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": WP_USER_AGENT,
+          },
+          auth: {
+            username: process.env.WP_API_USERNAME,
+            password: process.env.WP_API_PASSWORD,
+          },
+        }
+      );
+
+      console.log(`Successfully created parent page: ${wpResponse.data.id}`);
+      logMessage(`Created parent page: ${currentSlug}`);
+      return wpResponse.data.id;
+    }
   } catch (wpError) {
     console.error(`Error posting to WordPress: ${wpError.message}`);
     logMessage(`Error posting to WordPress: ${wpError.message}`);
@@ -108,4 +171,55 @@ function getParentPageSlug(url) {
   return pathSegments.length > 1 ? pathSegments[pathSegments.length - 2] : null;
 }
 
-module.exports = { postToWordPress, updateParentPage, getParentPageSlug };
+// Function to find a WordPress page by slug
+async function findPageBySlug(slug) {
+  try {
+    // Remove domain and protocol, including vancouver.wsu.edu
+    slug = slug.replace(/^(?:https?:\/\/)?(?:www\.)?vancouver\.wsu\.edu\//, "");
+    // Remove trailing slash if present
+    slug = slug.replace(/\/$/, "");
+
+    // If the slug is empty, it means it's the root URL
+    if (!slug) {
+      console.log("Root URL detected, skipping slug check.");
+      return null;
+    }
+
+    const auth = {
+      username: process.env.WP_API_USERNAME,
+      password: process.env.WP_API_PASSWORD,
+    };
+
+    console.log(`Searching for page with slug: ${slug}`);
+
+    const response = await axios.get(`${WP_API_BASE_URL}wp-json/wp/v2/pages`, {
+      params: {
+        slug: slug,
+        per_page: 1,
+      },
+      headers: {
+        "User-Agent": WP_USER_AGENT,
+      },
+      auth: auth,
+    });
+
+    if (response.data && response.data.length > 0) {
+      console.log(
+        `Found page with ID: ${response.data[0].id} for slug: ${slug}`
+      );
+      return response.data[0].id;
+    }
+    console.log(`No page found for slug: ${slug}`);
+    return null;
+  } catch (error) {
+    console.error(`Error finding page by slug ${slug}:`, error.message);
+    return null;
+  }
+}
+
+module.exports = {
+  postToWordPress,
+  updateParentPage,
+  getParentPageSlug,
+  findPageBySlug,
+};

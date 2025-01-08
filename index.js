@@ -8,8 +8,14 @@ const {
   postToWordPress,
   updateParentPage,
   getParentPageSlug,
+  findPageBySlug,
 } = require("./src/postToWordpress");
 const { transformToWPBlocks } = require("./src/cleanHtmlContent");
+const {
+  getAuthToken,
+  getUrlsFromSheet,
+  updateSheetWithTimestamp,
+} = require("./src/updateGoogleSheet");
 
 // Load environment variables from a .env file if present
 require("dotenv").config();
@@ -21,11 +27,19 @@ const CONCURRENCY_LIMIT = 5; // Adjust concurrency limit if needed
 const CRAWL_DELAY_MS = 0; // 2 seconds delay between requests
 const USER_AGENT =
   "EAB Crawler/1.0 (https://agency.eab.com/; bobsmith@eab.com)";
+const URL_PROCESS_LIMIT = 10; // Limit the number of URLs to process
 
 // Function to log messages to a file
 function logMessage(message) {
   const timestamp = new Date().toISOString();
   fs.appendFileSync(LOG_FILE, `[${timestamp}] ${message}\n`);
+}
+
+function ensureUrlProtocol(url) {
+  if (!/^https?:\/\//i.test(url)) {
+    return `https://${url}`;
+  }
+  return url;
 }
 
 function transformContentToWpBlocks(content) {
@@ -100,8 +114,15 @@ function sanitizeFileName(url) {
   return url.replace(/^https?:\/\//, "").replace(/[^\w.-]+/g, "_");
 }
 
-async function processContent(contentResponse, url, currentUrl, totalUrls) {
+async function processContent(
+  contentResponse,
+  originalUrl,
+  computedUrl,
+  currentUrl,
+  totalUrls
+) {
   const $ = cheerio.load(contentResponse.data);
+
   const sections = $('div[role="main"] > div.row > section')
     .map((i, el) => $(el).html())
     .get();
@@ -111,8 +132,11 @@ async function processContent(contentResponse, url, currentUrl, totalUrls) {
     // join the sections
     const contentHtml = sections.join("\n");
 
-    // transform the content to WP blocks
-    const transformedToWPContent = await transformToWPBlocks(contentHtml, url);
+    // transform the content to WP blocks using the original URL
+    const transformedToWPContent = await transformToWPBlocks(
+      contentHtml,
+      originalUrl
+    );
 
     const content$ = cheerio.load(transformedToWPContent);
 
@@ -126,13 +150,13 @@ async function processContent(contentResponse, url, currentUrl, totalUrls) {
     });
 
     // Save the content to a file
-    const directoryPath = createDirectoriesFromUrl(url);
-    const sanitizedFileName = sanitizeFileName(url) + ".txt";
+    const directoryPath = createDirectoriesFromUrl(computedUrl);
+    const sanitizedFileName = sanitizeFileName(computedUrl) + ".txt";
     const filePath = path.join(directoryPath, sanitizedFileName);
     fs.writeFileSync(filePath, transformedToWPContent);
-    console.log(`Finished: ${currentUrl} of ${totalUrls}: ✅ : ${url}`);
+    console.log(`Finished: ${currentUrl} of ${totalUrls}: ✅ : ${computedUrl}`);
     logMessage(
-      `Successfully processed: ${url} - Status: ${contentResponse.status}`
+      `Successfully processed: ${computedUrl} - Status: ${contentResponse.status}`
     );
 
     // Extract the page title and get text up until the first `-`
@@ -145,7 +169,14 @@ async function processContent(contentResponse, url, currentUrl, totalUrls) {
     // Extract the page meta description
     const metaDescription = $('meta[name="description"]').attr("content");
 
-    const slug = url.split("/").pop();
+    // Clean up the slug from computedUrl
+    let slug = computedUrl
+      .replace(/^vancouver\.wsu\.edu\//, "") // Remove domain
+      .replace(/\/$/, ""); // Remove trailing slash
+
+    // Ensure we don't have any duplicate path segments
+    const pathSegments = [...new Set(slug.split("/"))];
+    slug = pathSegments.join("/");
 
     const post = {
       title: pageTitle,
@@ -154,6 +185,7 @@ async function processContent(contentResponse, url, currentUrl, totalUrls) {
       meta: {
         description: metaDescription,
       },
+      // Use the full path from computedUrl for the slug
       slug: slug,
       images: imageUrls,
     };
@@ -162,31 +194,58 @@ async function processContent(contentResponse, url, currentUrl, totalUrls) {
     // Post the content to the WordPress API
     const pageId = await postToWordPress(post);
 
-    return { url, pageId };
+    return { url: computedUrl, pageId };
   } else {
     console.log(
-      `Finished: ${currentUrl} of ${totalUrls}: ❌ (No section found): ${url}`
+      `Finished: ${currentUrl} of ${totalUrls}: ❌ (No section found): ${computedUrl}`
     );
     logMessage(
-      `No section found for: ${url} - Status: ${contentResponse.status}`
+      `No section found for: ${computedUrl} - Status: ${contentResponse.status}`
     );
-    return { url, pageId: null };
+    return { url: computedUrl, pageId: null };
   }
 }
 
 // Fetch and process a single URL
-async function fetchUrl(url, currentUrl, totalUrls) {
+async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
   try {
-    // Perform a HEAD request to check the URL status
-    const headResponse = await axios.head(url, {
-      httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-      validateStatus: (status) => status < 500,
-      headers: { "User-Agent": USER_AGENT },
-    });
+    // Ensure the URLs have the correct protocol
+    originalUrl = ensureUrlProtocol(originalUrl);
+    computedUrl = ensureUrlProtocol(computedUrl);
 
     // Determine the target URL, following redirects if necessary
-    const targetUrl =
-      headResponse.status === 301 ? headResponse.headers.location : url;
+    const targetUrl = originalUrl;
+
+    // Check if the parent pages exist
+    // Check if the parent pages exist
+    const pathSegments = computedUrl
+      .replace(/^(?:https?:\/\/)?(?:www\.)?vancouver\.wsu\.edu\//, "") // Remove domain
+      .split("/")
+      .filter(Boolean);
+
+    const currentSlug = pathSegments[pathSegments.length - 1];
+
+    if (pathSegments.length > 1) {
+      const parentSlug = pathSegments.slice(0, -1).join("/");
+      console.log(`Checking for parent page: ${parentSlug}`);
+      const parentId = await findPageBySlug(parentSlug);
+
+      if (!parentId) {
+        console.log(
+          `Parent page "${parentSlug}" not found. Skipping creation of "${currentSlug}"`
+        );
+        logMessage(
+          `Skipped: ${currentSlug} - parent ${parentSlug} does not exist`
+        );
+        return { url: computedUrl, pageId: null };
+      }
+
+      console.log(
+        `Found parent page (ID: ${parentId}). Proceeding to scrape and create child page: ${currentSlug}`
+      );
+    } else {
+      console.log(`Creating root-level page: ${currentSlug}`);
+    }
 
     // Perform a GET request to fetch the content
     const contentResponse = await axios.get(targetUrl, {
@@ -194,120 +253,139 @@ async function fetchUrl(url, currentUrl, totalUrls) {
     });
 
     // Process the fetched content
-    return await processContent(contentResponse, url, currentUrl, totalUrls);
+    return await processContent(
+      contentResponse,
+      originalUrl,
+      computedUrl,
+      currentUrl,
+      totalUrls
+    );
   } catch (error) {
     // Log errors and append to the error file
-    fs.appendFileSync(ERROR_URL_FILE, `${error.message}: ${url}\n`);
-    console.error(`❌ Error processing URL ${url}: ${error.message}`);
-    logMessage(`Error processing URL ${url}: ${error.message}`);
+    const errorMessage = `Error processing URL ${originalUrl}: ${error.message}`;
+    fs.appendFileSync(ERROR_URL_FILE, `${errorMessage}\n`);
+    console.error(`❌ ${errorMessage}`);
+    logMessage(errorMessage);
 
     if (error.response) {
-      // console.error(`Response data: ${error.response.data}`);
-      console.error(`📉 Response status: ${error.response.status}`);
-      logMessage(
-        `Error response for URL ${url}: Status: ${error.response.status}`
-      );
+      const responseDetails = `Response status: ${
+        error.response.status
+      }, data: ${JSON.stringify(error.response.data)}`;
+      console.error(`📉 ${responseDetails}`);
+      logMessage(responseDetails);
     }
-    return { url, pageId: null };
+
+    return { url: computedUrl, pageId: null };
   }
 }
 
-// Main function to process URLs from an input file
+// Main function to process URLs from the Google Sheet
 async function checkUrls() {
-  const inputFile = process.argv[2];
-  if (!inputFile) {
-    console.error("Usage: node index.js <file_with_urls>");
-    process.exit(1);
-  }
+  try {
+    const auth = await getAuthToken();
+    let urls = await getUrlsFromSheet(auth);
 
-  // Clear the error file
-  fs.writeFileSync(ERROR_URL_FILE, "");
-
-  // Read URLs from the input file
-  const fileStream = fs.createReadStream(inputFile);
-  const rl = readline.createInterface({
-    input: fileStream,
-    crlfDelay: Infinity,
-  });
-
-  const urls = [];
-  for await (const line of rl) {
-    urls.push(line.trim()); // Trim whitespace to avoid processing empty lines
-  }
-
-  let currentUrl = 0;
-  const totalUrls = urls.length;
-
-  // Capture the start time
-  const startTime = new Date();
-
-  // Process URLs with a limited number of concurrent requests
-  const results = [];
-  const processQueue = async () => {
-    if (urls.length === 0) return;
-
-    const activeRequests = [];
-    while (activeRequests.length < CONCURRENCY_LIMIT && urls.length > 0) {
-      const url = urls.shift();
-      activeRequests.push(
-        fetchUrl(url, ++currentUrl, totalUrls)
-          .then((result) => results.push(result))
-          .finally(() => {
-            const index = activeRequests.indexOf(url);
-            if (index > -1) activeRequests.splice(index, 1);
-          })
-      );
-      await new Promise((resolve) => setTimeout(resolve, CRAWL_DELAY_MS)); // Delay between requests
+    if (urls.length === 0) {
+      console.error("No URLs found in the Google Sheet.");
+      process.exit(1);
     }
-    await Promise.all(activeRequests);
-    await processQueue();
-  };
 
-  await processQueue();
+    // Limit the number of URLs to process
+    urls = urls.slice(0, URL_PROCESS_LIMIT);
 
-  // Set parent pages after all pages have been posted
-  for (const result of results) {
-    if (result.pageId) {
-      const parentPageSlug = getParentPageSlug(result.url);
-      if (parentPageSlug) {
-        const parentResult = results.find((r) =>
-          r.url.includes(parentPageSlug)
+    let currentUrl = 0;
+    const totalUrls = urls.length;
+    // Clear the error file
+    fs.writeFileSync(ERROR_URL_FILE, "");
+
+    // Capture the start time
+    const startTime = new Date();
+
+    // Process URLs with a limited number of concurrent requests
+    const results = [];
+    const processQueue = async () => {
+      if (urls.length === 0) return;
+
+      const activeRequests = [];
+      while (activeRequests.length < CONCURRENCY_LIMIT && urls.length > 0) {
+        const urlData = urls.shift();
+        activeRequests.push(
+          fetchUrl(
+            urlData.originalUrl,
+            urlData.computedUrl,
+            ++currentUrl,
+            totalUrls
+          )
+            .then(async (result) => {
+              results.push(result);
+              if (result.pageId) {
+                await updateSheetWithTimestamp(
+                  auth,
+                  urlData.rowNumber,
+                  result.pageId
+                );
+              }
+            })
+            .finally(() => {
+              const index = activeRequests.indexOf(urlData.originalUrl);
+              if (index > -1) activeRequests.splice(index, 1);
+            })
         );
-        if (parentResult && parentResult.pageId) {
-          await updateParentPage(result.pageId, parentResult.pageId);
+        await new Promise((resolve) => setTimeout(resolve, CRAWL_DELAY_MS));
+      }
+
+      await Promise.all(activeRequests);
+      await processQueue();
+    };
+
+    await processQueue();
+
+    // Set parent pages after all pages have been posted
+    for (const result of results) {
+      if (result.pageId) {
+        const parentPageSlug = getParentPageSlug(result.url);
+        if (parentPageSlug) {
+          const parentResult = results.find((r) =>
+            r.url.includes(parentPageSlug)
+          );
+          if (parentResult && parentResult.pageId) {
+            await updateParentPage(result.pageId, parentResult.pageId);
+          }
         }
       }
     }
+
+    // Capture the end time
+    const endTime = new Date();
+
+    console.log("All URLs have been processed.");
+
+    // Calculate the elapsed time
+    const elapsedTimeMs = endTime - startTime;
+    const elapsedMinutes = Math.floor(elapsedTimeMs / 60000); // 1 minute = 60000 ms
+    const elapsedSeconds = Math.floor((elapsedTimeMs % 60000) / 1000); // Remaining seconds
+
+    // Generate a report of the results
+    const withErrorUrlCount = fs
+      .readFileSync(ERROR_URL_FILE, "utf-8")
+      .split("\n")
+      .filter(Boolean).length;
+    console.log("\nReport generated:");
+    console.log(`Total URLs processed: ${totalUrls}`);
+    console.log(`URLs with Error: ${withErrorUrlCount}`);
+    // Conditionally format the elapsed time
+    if (elapsedMinutes > 0) {
+      console.log(
+        `Total processing time: ${elapsedMinutes} minutes, ${elapsedSeconds} seconds`
+      );
+    } else {
+      console.log(`Total processing time: ${elapsedSeconds} seconds`);
+    }
+
+    console.log("---------------------------------");
+  } catch (error) {
+    console.error("Error:", error);
   }
-
-  // Capture the end time
-  const endTime = new Date();
-
-  console.log("All URLs have been processed.");
-
-  // Calculate the elapsed time
-  const elapsedTimeMs = endTime - startTime;
-  const elapsedMinutes = Math.floor(elapsedTimeMs / 60000); // 1 minute = 60000 ms
-  const elapsedSeconds = Math.floor((elapsedTimeMs % 60000) / 1000); // Remaining seconds
-
-  // Generate a report of the results
-  const withErrorUrlCount = fs
-    .readFileSync(ERROR_URL_FILE, "utf-8")
-    .split("\n")
-    .filter(Boolean).length;
-  console.log("\nReport generated:");
-  console.log(`Total URLs processed: ${totalUrls}`);
-  console.log(`URLs with Error: ${withErrorUrlCount}`);
-  // Conditionally format the elapsed time
-  if (elapsedMinutes > 0) {
-    console.log(
-      `Total processing time: ${elapsedMinutes} minutes, ${elapsedSeconds} seconds`
-    );
-  } else {
-    console.log(`Total processing time: ${elapsedSeconds} seconds`);
-  }
-
-  console.log("---------------------------------");
 }
 
 // Start the URL checking process

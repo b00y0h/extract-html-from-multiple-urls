@@ -4,6 +4,7 @@ crawling_log.txt
 error_url.txt
 urls-full.txt
 API_log.txt
+service-account-key.json
 # Logs
 
 logs

@@ -51,21 +51,33 @@ function transformColumnsToWpBlocks(content) {
   return output;
 }
 
+function ensureUrlProtocol(url) {
+  if (!/^https?:\/\//i.test(url)) {
+    return `https://${url}`;
+  }
+  return url;
+}
+
 // Extract the root URL (protocol and host) from a given URL
 function getRootUrl(url) {
   try {
+    url = ensureUrlProtocol(url);
     const parsedUrl = new URL(url);
     return `${parsedUrl.protocol}//${parsedUrl.host}`;
   } catch (error) {
-    console.error("Invalid URL:", error);
+    console.error("Invalid URL:", error, "Input URL:", url);
     return null;
   }
 }
 
 // Clean and transform HTML content for further processing
-async function transformToWPBlocks(contentHtml, url) {
+async function transformToWPBlocks(contentHtml, originalUrl) {
   const $ = cheerio.load(contentHtml);
-  const rootUrl = getRootUrl(url);
+  const rootUrl = getRootUrl(originalUrl);
+
+  if (!rootUrl) {
+    throw new Error(`Invalid root URL derived from: ${originalUrl}`);
+  }
 
   // Remove commented-out content
   $("*").each(function () {
