@@ -439,7 +439,7 @@ async function testSpecificUrl(originalUrl, computedUrl) {
 // Test the specific URL
 const originalUrl = "https://studentaffairs.vancouver.wsu.edu/elca";
 const computedUrl = "https://vancouver.wsu.edu/academics";
-// testSpecificUrl(originalUrl, computedUrl);
+testSpecificUrl(originalUrl, computedUrl);
 
 // Main function to process URLs from the Google Sheet
 async function checkUrls() {
@@ -577,4 +577,4 @@ async function checkUrls() {
 }
 
 // Start the URL checking process
-checkUrls();
+// checkUrls();
