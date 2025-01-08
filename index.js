@@ -27,7 +27,7 @@ const CONCURRENCY_LIMIT = 5; // Adjust concurrency limit if needed
 const CRAWL_DELAY_MS = 0; // 2 seconds delay between requests
 const USER_AGENT =
   "EAB Crawler/1.0 (https://agency.eab.com/; bobsmith@eab.com)";
-const URL_PROCESS_LIMIT = 10; // Limit the number of URLs to process
+const URL_PROCESS_LIMIT = 300; // Limit the number of URLs to process
 
 // Function to log messages to a file
 function logMessage(message) {
@@ -95,7 +95,7 @@ function transformContentToWpBlocks(content) {
   return output;
 }
 
-// Create directories based on the URL path
+// Create directories based on the original URL path
 function createDirectoriesFromUrl(url) {
   const parsedUrl = new URL(url);
   const domainFolder = parsedUrl.hostname;
@@ -172,8 +172,8 @@ async function processContent(
 
     // Save the content to a file
     console.log(`💾 Saving content to file...`);
-    const directoryPath = createDirectoriesFromUrl(computedUrl);
-    const sanitizedFileName = sanitizeFileName(computedUrl) + ".txt";
+    const directoryPath = createDirectoriesFromUrl(originalUrl);
+    const sanitizedFileName = sanitizeFileName(originalUrl) + ".txt";
     const filePath = path.join(directoryPath, sanitizedFileName);
     fs.writeFileSync(filePath, transformedToWPContent);
     console.log(`✅ Content saved to: ${filePath}`);
@@ -408,6 +408,39 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
   }
 }
 
+// Function to test a specific URL
+async function testSpecificUrl(originalUrl, computedUrl) {
+  try {
+    const totalUrls = 1;
+    const currentUrl = 1;
+
+    // Ensure the URLs have the correct protocol
+    originalUrl = ensureUrlProtocol(originalUrl);
+    computedUrl = ensureUrlProtocol(computedUrl);
+
+    // Fetch and process the URL
+    const result = await fetchUrl(
+      originalUrl,
+      computedUrl,
+      currentUrl,
+      totalUrls
+    );
+
+    if (result.pageId) {
+      console.log(`✨ Page created successfully with ID: ${result.pageId}`);
+    } else {
+      console.log(`⚠️  Page creation failed`);
+    }
+  } catch (error) {
+    console.error("Error:", error);
+  }
+}
+
+// Test the specific URL
+const originalUrl = "https://studentaffairs.vancouver.wsu.edu/elca";
+const computedUrl = "https://vancouver.wsu.edu/academics";
+// testSpecificUrl(originalUrl, computedUrl);
+
 // Main function to process URLs from the Google Sheet
 async function checkUrls() {
   try {
@@ -440,6 +473,9 @@ async function checkUrls() {
     // Capture the start time
     const startTime = new Date();
 
+    // Track URLs that didn't get uploaded due to missing parents
+    const urlsMissingParents = [];
+
     // Process URLs with a limited number of concurrent requests
     const results = [];
     const processQueue = async () => {
@@ -463,6 +499,8 @@ async function checkUrls() {
                   urlData.rowNumber,
                   result.pageId
                 );
+              } else if (!result.pageId && result.url) {
+                urlsMissingParents.push(result.url);
               }
             })
             .finally(() => {
@@ -519,6 +557,10 @@ async function checkUrls() {
     console.log(
       `Pages successfully created in WordPress: ${successfulPagesCount}`
     );
+    console.log(
+      `URLs that didn't get uploaded due to missing parents: ${urlsMissingParents.length}`
+    );
+    urlsMissingParents.forEach((url) => console.log(`- ${url}`));
     // Conditionally format the elapsed time
     if (elapsedMinutes > 0) {
       console.log(

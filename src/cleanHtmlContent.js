@@ -8,9 +8,16 @@ async function transformToWPBlocks(contentHtml, originalUrl) {
   try {
     const $ = cheerio.load(contentHtml);
     console.log("✅ Content loaded into cheerio");
+    console.log("📊 Initial content stats:");
+    console.log("- Total elements:", $("*").length);
+    console.log("- Images found:", $("img").length);
+    console.log(
+      "- Main content area:",
+      $('div[role="main"]').length ? "Found" : "Not found"
+    );
+    console.log("- Sections found:", $("section").length);
 
     const rootUrl = getRootUrl(originalUrl);
-    console.log("🌍 Root URL:", rootUrl);
 
     if (!rootUrl) {
       throw new Error(`Invalid root URL derived from: ${originalUrl}`);
@@ -43,6 +50,12 @@ async function transformToWPBlocks(contentHtml, originalUrl) {
     // Remove empty <div> tags
     $("div:empty").remove();
 
+    // Remove <style> tags
+    $("style").remove();
+
+    // Remove <br> tags
+    $("br").remove();
+
     // Handle <iframe> tags
     $("iframe").each((i, el) => {
       const src = $(el).attr("src");
@@ -65,33 +78,58 @@ async function transformToWPBlocks(contentHtml, originalUrl) {
       $(el).replaceWith(`<p>${$(el).html().trim()}</p>`);
     });
 
-    // Transform specific <div> to WordPress blocks
-    $("div.paragraph.paragraph--type--bp-columns").each((i, el) => {
-      const transformedContent = transformColumnsToWpBlocks($.html(el));
-      $(el).replaceWith(transformedContent);
+    console.log("\n🔍 PRE-IMAGE PROCESSING ---------------------");
+    console.log("Found images:", $("img").length);
+    // console.log("First 500 chars of content:");
+    // console.log($.html().substring(0, 500));
+    console.log("All img tags found:");
+    $("img").each((i, el) => {
+      console.log(`Image ${i + 1}:`, $.html(el));
     });
+    console.log("🔍 PRE-IMAGE PROCESSING END ---------------------\n");
 
     // Handle images with proper URL resolution
     $("img").each((i, el) => {
+      console.log(
+        "\n🖼️🖼️🖼️🖼️🖼️🖼️🖼️🖼️🖼️🖼️  IMAGE PROCESSING ---------------------"
+      );
+      console.log("📄 Parent HTML context:");
+      console.log($(el).parent().html());
+
       let src = $(el).attr("src");
+      console.log("🔗 Original src:", src);
+      console.log("🏷️  Alt text:", $(el).attr("alt"));
+      console.log("📝 Parent element:", $(el).parent().prop("tagName"));
+
+      // Log all attributes on the img tag
+      const attributes = el.attribs;
+      console.log("🏷️  All image attributes:", attributes);
+
       const alt = $(el).attr("alt") || "";
       const title = $(el).attr("title") || "";
       const caption = $(el).attr("data-caption") || "";
 
       // Handle different URL formats
       if (src) {
+        console.log("🔄 Processing image URL:");
+        console.log("  - Original:", src);
+
         if (src.startsWith("/")) {
           // Relative path starting with /
-          src = `https://studentaffairs.vancouver.wsu.edu${src}`;
+          src = `${rootUrl}${src}`;
+          console.log("  - Modified (with leading /):", src);
         } else if (!src.startsWith("http")) {
           // Relative path without leading /
-          src = `https://studentaffairs.vancouver.wsu.edu/${src}`;
+          src = `${rootUrl}/${src}`;
+          console.log("  - Modified (without leading /):", src);
+        } else {
+          console.log("  - Unchanged (absolute URL):", src);
         }
       }
 
       let imageBlock = `<!-- wp:image {"sizeSlug":"full","linkDestination":"none"} -->
-  <figure class="wp-block-image size-full">
-  <img src="${src}" alt="${alt}"`;
+      <figure class="wp-block-image size-full">
+      <img src="${src}" alt="${alt}"`;
 
       if (title) {
         imageBlock += ` title="${title}"`;
@@ -105,14 +143,32 @@ async function transformToWPBlocks(contentHtml, originalUrl) {
 
       imageBlock += "\n</figure>\n<!-- /wp:image -->\n";
 
+      console.log("📦 Generated image block:");
+      console.log(imageBlock);
+
       // Replace the entire parent <p> tag if it only contains the image
       const $parent = $(el).parent("p");
+      console.log("📝 Parent info:");
+      console.log("  - Has parent <p>:", $parent.length > 0);
+      console.log(
+        "  - Parent contents length:",
+        $parent.length ? $parent.contents().length : "N/A"
+      );
+
       if ($parent.length && $parent.contents().length === 1) {
+        console.log("  - Replacing parent <p> with image block");
         $parent.replaceWith(imageBlock);
       } else {
+        console.log("  - Replacing just the img tag with image block");
         $(el).replaceWith(imageBlock);
       }
+
+      console.log("🖼️  IMAGE PROCESSING END ---------------------\n");
     });
+    // Add this after the image processing section
+    console.log("\n🔍 POST-IMAGE PROCESSING ---------------------");
+    console.log("Remaining images:", $("img").length);
+    console.log("🔍 POST-IMAGE PROCESSING END ---------------------\n");
 
     // Handle blockquotes
     $("blockquote").each(function () {
@@ -128,10 +184,39 @@ async function transformToWPBlocks(contentHtml, originalUrl) {
       );
     });
 
-    // Remove <article>, <section>, and <div> tags but keep their content
-    $("article, section, div").each((i, el) => {
-      $(el).replaceWith($(el).html());
+    // With this more detailed cleanup:
+    console.log("🧹 Starting content cleanup...");
+
+    // First, clean up deeply nested divs
+    $("div").each(function () {
+      const $this = $(this);
+      // Only replace divs that don't contain other divs
+      if ($this.find("div").length === 0) {
+        $this.replaceWith($this.html());
+      }
     });
+
+    // Clean up remaining divs from bottom up
+    while ($("div").length > 0) {
+      $("div").each(function () {
+        const $this = $(this);
+        if ($this.find("div").length === 0) {
+          $this.replaceWith($this.html());
+        }
+      });
+    }
+
+    // Now clean up sections
+    $("section").each(function () {
+      $(this).replaceWith($(this).html());
+    });
+
+    // Finally clean up articles
+    $("article").each(function () {
+      $(this).replaceWith($(this).html());
+    });
+
+    console.log("✨ Content cleanup complete");
 
     // Handle paragraphs
     $("p").each(function () {
@@ -257,95 +342,6 @@ function getRootUrl(url) {
   } catch (error) {
     console.error("Invalid URL:", error, "Input URL:", url);
     return null;
-  }
-}
-
-// Clean and transform HTML content for further processing
-async function transformToWPBlocks(contentHtml, originalUrl) {
-  console.log("\n🔄 TRANSFORM START ---------------------");
-  console.log("🌐 Original URL:", originalUrl);
-
-  try {
-    const $ = cheerio.load(contentHtml);
-    console.log("✅ Content loaded into cheerio");
-
-    const rootUrl = getRootUrl(originalUrl);
-    console.log("🌍 Root URL:", rootUrl);
-
-    if (!rootUrl) {
-      throw new Error(`Invalid root URL derived from: ${originalUrl}`);
-    }
-
-    // Log initial content structure
-    console.log("📄 Initial content structure:");
-    console.log(contentHtml.substring(0, 500) + "...");
-
-    // Remove commented-out content
-    try {
-      $("*").each(function () {
-        const $this = $(this);
-        $this
-          .contents()
-          .filter(function () {
-            return (
-              this.type === "comment" &&
-              this.data.includes("<") &&
-              this.data.includes(">")
-            );
-          })
-          .remove();
-      });
-      console.log("✅ Removed commented content");
-    } catch (error) {
-      console.error("❌ Error removing comments:", error.message);
-    }
-
-    // Process each HTML element type with error handling
-    try {
-      // Remove specific <a> tags
-      $("a#main-content").remove();
-      $('a[href="#main-content"]:contains("Back to top")').remove();
-      console.log("✅ Removed specific <a> tags");
-
-      // Remove empty <div> tags
-      $("div:empty").remove();
-      console.log("✅ Removed empty divs");
-
-      // Handle <iframe> tags
-      $("iframe").each((i, el) => {
-        const src = $(el).attr("src");
-        if (!src || !src.includes("https://www.youtube.com/embed")) {
-          $(el).replaceWith(
-            `<h2>🫥🫥<br />iFrame found and needs updating: <br />${
-              src || "no src"
-            }<br />🫥🫥🫥</h2>`
-          );
-        }
-      });
-      console.log("✅ Processed iframes");
-
-      // Continue with other transformations...
-      // Add similar error handling and logging for each section
-
-      // Log final content before returning
-      const finalContent = $("body")
-        .html()
-        .replace(/^\s*[\r\n]/gm, "")
-        .replace(/^\s+/gm, "");
-
-      console.log("📄 Final content preview:");
-      console.log(finalContent.substring(0, 500) + "...");
-      console.log("🔄 TRANSFORM END ---------------------\n");
-
-      return Promise.resolve(finalContent);
-    } catch (error) {
-      console.error("❌ Error during HTML transformations:", error);
-      throw error;
-    }
-  } catch (error) {
-    console.error("💥 Fatal error in transformToWPBlocks:", error);
-    console.log("🔄 TRANSFORM END (WITH ERROR) ---------------------\n");
-    throw error;
   }
 }
 
