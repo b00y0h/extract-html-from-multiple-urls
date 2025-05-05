@@ -4,6 +4,7 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const https = require("https");
 const path = require("path");
+const config = require("./src/config");
 const {
   postToWordPress,
   updateParentPage,
@@ -21,18 +22,21 @@ const {
   sanitizeFileName,
   sortUrlsByHierarchy,
   verifyParentHierarchy,
+  transformToStagingUrl,
 } = require("./src/utils/urls");
 const { logMessage } = require("./src/utils/logs");
 // Load environment variables from a .env file if present
 require("dotenv").config();
 
-// Constants
-const ERROR_URL_FILE = "error_url.txt";
-const CONCURRENCY_LIMIT = 5; // Adjust concurrency limit if needed
-const CRAWL_DELAY_MS = 0; // 2 seconds delay between requests
-const USER_AGENT =
-  "EAB Crawler/1.0 (https://agency.eab.com/; bobsmith@eab.com)";
-const URL_PROCESS_LIMIT = 300; // Limit the number of URLs to process
+// Replace constants with config values
+const ERROR_URL_FILE = config.paths.errorUrlFile;
+const CONCURRENCY_LIMIT = config.crawler.concurrencyLimit;
+const CRAWL_DELAY_MS = config.crawler.crawlDelayMs;
+const USER_AGENT = config.crawler.userAgent;
+const URL_PROCESS_LIMIT = config.crawler.urlProcessLimit;
+
+// Sleep function for rate limiting
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function transformContentToWpBlocks(content) {
   // console.log("⭐��⭐ ~ transformContentToWpBlocks ~ content:", content);
@@ -173,7 +177,8 @@ async function processContent(
     // Clean up the slug
     console.log(`🔧 Processing slug...`);
     let slug = computedUrl
-      .replace(/^vancouver\.wsu\.edu\//, "") // Remove domain
+      .replace(new RegExp(`^${config.urls.production}\/`), "") // Remove production domain
+      .replace(new RegExp(`^${config.urls.staging}\/`), "") // Remove staging domain
       .replace(/\/$/, ""); // Remove trailing slash
 
     // Ensure we don't have duplicate path segments
@@ -233,9 +238,12 @@ async function processContent(
 // Complete fetchUrl function with hierarchy verification
 async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
   try {
+    // Apply rate limiting for content fetching
+    await sleep(config.crawler.crawlDelayMs);
+
     // Ensure the URLs have the correct protocol
     originalUrl = ensureUrlProtocol(originalUrl);
-    computedUrl = ensureUrlProtocol(computedUrl);
+    computedUrl = transformToStagingUrl(originalUrl);
 
     // Determine the target URL, following redirects if necessary
     const targetUrl = originalUrl;
@@ -283,6 +291,9 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     console.log(`📥 Fetching content from: ${targetUrl}`);
     const contentResponse = await axios.get(targetUrl, {
       httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+      headers: {
+        "User-Agent": config.crawler.userAgent,
+      },
     });
     console.log(`✅ Content fetched successfully`);
 
@@ -457,14 +468,6 @@ async function checkUrls(customUrls = null) {
     console.error("Error:", error);
   }
 }
-
-const customUrls = [
-  {
-    originalUrl:
-      "https://studentaffairs.vancouver.wsu.edu/registrars-office/course-catalog",
-    computedUrl: "https://vancouver.wsu.edu/academics/academic-calendar",
-  },
-];
 
 // Start the URL checking process
 checkUrls();

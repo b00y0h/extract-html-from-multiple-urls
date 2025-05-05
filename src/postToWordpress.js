@@ -1,31 +1,33 @@
 require("dotenv").config();
 const fs = require("fs");
 const axios = require("axios");
+const config = require("./config");
 const { batchUploadImagesToWP } = require("./batchUploadImagesToWp");
 
-const WP_USER_AGENT =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36";
-const WP_API_BASE_URL =
-  process.env.WP_API_BASE_URL || "https://wsuwp.vancouver.wsu.edu/eab/";
-const LOG_FILE = "API_log.txt";
+// Helper function for rate limiting
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Function to log messages to a file
 function logMessage(message) {
   const timestamp = new Date().toISOString();
-  fs.appendFileSync(LOG_FILE, `[${timestamp}] ${message}\n`);
+  fs.appendFileSync(config.paths.apiLogFile, `[${timestamp}] ${message}\n`);
 }
 
 const wpConfig = {
-  endpoint: `${WP_API_BASE_URL}wp-json`,
-  username: process.env.WP_API_USERNAME,
-  password: process.env.WP_API_PASSWORD,
+  endpoint: `${config.wordpress.apiBaseUrl}wp-json`,
+  username: config.wordpress.username,
+  password: config.wordpress.password,
 };
+
 // Process the content of a URL and save it to a file
 async function postToWordPress(post) {
   const { title, meta, slug, images } = post;
   let { content } = post;
 
   try {
+    // Apply rate limiting
+    await sleep(config.wordpress.rateLimitMs);
+
     // Clean the slug - remove domain and protocol
     let cleanSlug = slug.replace(/^(?:https?:\/\/)?(?:www\.)?[^\/]+\//, "");
     // Remove trailing slash if present
@@ -62,6 +64,9 @@ async function postToWordPress(post) {
         `Found parent page (ID: ${parentId}). Creating child page: ${currentSlug}`
       );
 
+      // Apply rate limiting before creating child page
+      await sleep(config.wordpress.rateLimitMs);
+
       // Parent exists, create the child page
       const postData = {
         title,
@@ -75,16 +80,16 @@ async function postToWordPress(post) {
       };
 
       const wpResponse = await axios.post(
-        `${WP_API_BASE_URL}wp-json/wp/v2/pages/`,
+        `${config.wordpress.apiBaseUrl}wp-json/wp/v2/pages/`,
         postData,
         {
           headers: {
             "Content-Type": "application/json",
-            "User-Agent": WP_USER_AGENT,
+            "User-Agent": config.wordpress.userAgent,
           },
           auth: {
-            username: process.env.WP_API_USERNAME,
-            password: process.env.WP_API_PASSWORD,
+            username: config.wordpress.username,
+            password: config.wordpress.password,
           },
         }
       );
@@ -98,6 +103,9 @@ async function postToWordPress(post) {
       // This is a root-level page, create it
       console.log(`Creating root-level page: ${currentSlug}`);
 
+      // Apply rate limiting before creating root page
+      await sleep(config.wordpress.rateLimitMs);
+
       const postData = {
         title,
         content,
@@ -109,16 +117,16 @@ async function postToWordPress(post) {
       };
 
       const wpResponse = await axios.post(
-        `${WP_API_BASE_URL}wp-json/wp/v2/pages/`,
+        `${config.wordpress.apiBaseUrl}wp-json/wp/v2/pages/`,
         postData,
         {
           headers: {
             "Content-Type": "application/json",
-            "User-Agent": WP_USER_AGENT,
+            "User-Agent": config.wordpress.userAgent,
           },
           auth: {
-            username: process.env.WP_API_USERNAME,
-            password: process.env.WP_API_PASSWORD,
+            username: config.wordpress.username,
+            password: config.wordpress.password,
           },
         }
       );
@@ -137,20 +145,21 @@ async function postToWordPress(post) {
 // Function to update the parent page ID of a WordPress page
 async function updateParentPage(pageId, parentPageId) {
   try {
-    const auth = {
-      username: process.env.WP_API_USERNAME,
-      password: process.env.WP_API_PASSWORD,
-    };
+    // Apply rate limiting
+    await sleep(config.wordpress.rateLimitMs);
 
     await axios.post(
-      `${WP_API_BASE_URL}wp-json/wp/v2/pages/${pageId}`,
+      `${config.wordpress.apiBaseUrl}wp-json/wp/v2/pages/${pageId}`,
       { parent: parentPageId },
       {
         headers: {
           "Content-Type": "application/json",
-          "User-Agent": WP_USER_AGENT,
+          "User-Agent": config.wordpress.userAgent,
         },
-        auth: auth,
+        auth: {
+          username: config.wordpress.username,
+          password: config.wordpress.password,
+        },
       }
     );
 
@@ -164,16 +173,12 @@ async function updateParentPage(pageId, parentPageId) {
   }
 }
 
-// Function to extract the parent page slug from a URL
-function getParentPageSlug(url) {
-  const parsedUrl = new URL(url);
-  const pathSegments = parsedUrl.pathname.split("/").filter(Boolean);
-  return pathSegments.length > 1 ? pathSegments[pathSegments.length - 2] : null;
-}
-
 // Function to find a WordPress page by slug
 async function findPageBySlug(slug) {
   try {
+    // Apply rate limiting
+    await sleep(config.wordpress.rateLimitMs);
+
     // Remove domain and protocol, including vancouver.wsu.edu
     slug = slug.replace(/^(?:https?:\/\/)?(?:www\.)?vancouver\.wsu\.edu\//, "");
     // Remove trailing slash if present
@@ -187,26 +192,27 @@ async function findPageBySlug(slug) {
     const pathSegments = slug.split("/");
     const searchSlug = pathSegments[pathSegments.length - 1];
 
-    const auth = {
-      username: process.env.WP_API_USERNAME,
-      password: process.env.WP_API_PASSWORD,
-    };
-
     console.log(`\n🔍 SEARCH START -----------------------------`);
     console.log(`📂 Full path: ${slug}`);
     console.log(`🎯 Searching for: ${searchSlug}`);
     console.log(`📚 Path segments:`, pathSegments);
 
-    const response = await axios.get(`${WP_API_BASE_URL}wp-json/wp/v2/pages`, {
-      params: {
-        slug: searchSlug,
-        per_page: 1,
-      },
-      headers: {
-        "User-Agent": WP_USER_AGENT,
-      },
-      auth: auth,
-    });
+    const response = await axios.get(
+      `${config.wordpress.apiBaseUrl}wp-json/wp/v2/pages`,
+      {
+        params: {
+          slug: searchSlug,
+          per_page: 1,
+        },
+        headers: {
+          "User-Agent": config.wordpress.userAgent,
+        },
+        auth: {
+          username: config.wordpress.username,
+          password: config.wordpress.password,
+        },
+      }
+    );
 
     if (response.data && response.data.length > 0) {
       const foundPage = response.data[0];
@@ -218,13 +224,19 @@ async function findPageBySlug(slug) {
         console.log(`👀 Looking for parent: ${parentSlug}`);
 
         if (foundPage.parent) {
+          // Apply rate limiting before fetching parent
+          await sleep(config.wordpress.rateLimitMs);
+
           const parentResponse = await axios.get(
-            `${WP_API_BASE_URL}wp-json/wp/v2/pages/${foundPage.parent}`,
+            `${config.wordpress.apiBaseUrl}wp-json/wp/v2/pages/${foundPage.parent}`,
             {
               headers: {
-                "User-Agent": WP_USER_AGENT,
+                "User-Agent": config.wordpress.userAgent,
               },
-              auth: auth,
+              auth: {
+                username: config.wordpress.username,
+                password: config.wordpress.password,
+              },
             }
           );
 
@@ -256,6 +268,12 @@ async function findPageBySlug(slug) {
 module.exports = {
   postToWordPress,
   updateParentPage,
-  getParentPageSlug,
+  getParentPageSlug: (url) => {
+    const parsedUrl = new URL(url);
+    const pathSegments = parsedUrl.pathname.split("/").filter(Boolean);
+    return pathSegments.length > 1
+      ? pathSegments[pathSegments.length - 2]
+      : null;
+  },
   findPageBySlug,
 };

@@ -1,124 +1,67 @@
-const WPAPI = require("wpapi");
+const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
-const { exec } = require("child_process");
+const { logMessage } = require("./utils/logs");
+const config = require("./config");
 
-async function batchUploadImagesToWP(imageUrls) {
-  // Initialize WordPress API
-  const wp = new WPAPI({
-    endpoint: `${process.env.WP_API_BASE_URL}wp-json`,
-    username: process.env.WP_API_USERNAME,
-    password: process.env.WP_API_PASSWORD,
-    auth: true,
-  });
+// Helper function for rate limiting
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  // Set the User-Agent header
-  wp.setHeaders({
-    "User-Agent":
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36",
-  });
-
-  const downloadFile = async (imageUrl) => {
-    const fileName = path.basename(imageUrl);
-    const filePath = path.join(process.cwd(), fileName);
-    // console.log("Starting download for URL:", imageUrl);
-    // console.log("Saving to path:", filePath);
-
-    return new Promise((resolve, reject) => {
-      if (fs.existsSync(filePath)) {
-        try {
-          fs.unlinkSync(filePath);
-          // console.log(`Deleted existing file: ${filePath}`);
-        } catch (err) {
-          console.error(`Error deleting existing file: ${err}`);
-        }
-      }
-
-      exec(`curl -o "${filePath}" "${imageUrl}"`, (error, stdout, stderr) => {
-        if (error) {
-          console.error("Download error:", error);
-          reject(error);
-          return;
-        }
-
-        if (fs.existsSync(filePath)) {
-          const stats = fs.statSync(filePath);
-          console.log(`Downloaded file size: ${stats.size} bytes`);
-          resolve(filePath);
-        } else {
-          reject(new Error(`File not found after download: ${filePath}`));
-        }
-      });
-    });
-  };
-
-  const uploadToWordPress = async (filePath, image, postId = null) => {
-    try {
-      const fileName = path.basename(filePath);
-
-      console.log(`Uploading ${fileName} to WordPress...`);
-
-      const response = await wp
-        .media()
-        .file(filePath) // Use the file path directly
-        .create({
-          title: fileName,
-          alt_text:
-            image.alt || `No alt text. Image originally from: ${image.url}`,
-          caption: "",
-          description: `Image originally from: ${image.url}`,
-        });
-
-      // Add post association if postId is provided
-      if (postId) {
-        updateData.post = postId;
-      }
-
-      // Clean up the downloaded file
-      fs.unlinkSync(filePath);
-
-      return {
-        image: image.url,
-        originalUrl: image.url,
-        originalName: fileName,
-        wordpressUrl: response.source_url,
-        mediaId: response.id,
-        postId: response.post || null,
-      };
-    } catch (error) {
-      console.error(`Upload error for ${filePath}:`, {
-        message: error.message,
-        code: error.code,
-        data: error.data,
-      });
-      throw error;
-    }
-  };
-
+async function batchUploadImagesToWP(images, wpConfig) {
   const results = [];
-  const errors = [];
 
-  for (const image of imageUrls) {
+  for (const image of images) {
     try {
-      // console.log(`\n--- Processing image: ${image.url} ---`);
-      const filePath = await downloadFile(image.url);
-      // console.log(`Successfully downloaded to: ${filePath}`);
-      const uploadResult = await uploadToWordPress(filePath, image);
-      // console.log(
-      //   `Successfully uploaded to WordPress: ${uploadResult.wordpressUrl}`
-      // );
-      results.push(uploadResult);
-    } catch (error) {
-      console.error(`Error processing ${image.url}:`, error);
-      errors.push({
-        url: image.url,
-        error: error.message,
-      });
-    }
-  }
+      // Apply rate limiting between image uploads
+      await sleep(config.wordpress.rateLimitMs);
 
-  if (errors.length > 0) {
-    console.error("Some uploads failed:", errors);
+      const response = await axios.get(image.url, {
+        responseType: "arraybuffer",
+        headers: {
+          "User-Agent": config.wordpress.userAgent,
+        },
+      });
+
+      const buffer = Buffer.from(response.data, "binary");
+      const fileName = path.basename(image.url);
+      const filePath = path.join(config.paths.imagesDir, fileName);
+
+      // Save the image to the images directory
+      fs.writeFileSync(filePath, buffer);
+
+      // Apply rate limiting before WordPress media upload
+      await sleep(config.wordpress.rateLimitMs);
+
+      const uploadResponse = await axios.post(
+        `${wpConfig.endpoint}/wp/v2/media`,
+        buffer,
+        {
+          headers: {
+            "Content-Type": response.headers["content-type"],
+            "Content-Disposition": `attachment; filename="${fileName}"`,
+            "User-Agent": config.wordpress.userAgent,
+          },
+          auth: {
+            username: wpConfig.username,
+            password: wpConfig.password,
+          },
+        }
+      );
+
+      results.push({
+        originalUrl: image.url,
+        localPath: filePath,
+        wordpressUrl: uploadResponse.data.source_url,
+        id: uploadResponse.data.id,
+      });
+
+      logMessage(
+        `Successfully downloaded image to ${filePath} and uploaded to WordPress: ${image.url} -> ${uploadResponse.data.source_url}`
+      );
+    } catch (error) {
+      console.error(`Error processing image ${image.url}:`, error.message);
+      logMessage(`Error processing image ${image.url}: ${error.message}`);
+    }
   }
 
   return results;

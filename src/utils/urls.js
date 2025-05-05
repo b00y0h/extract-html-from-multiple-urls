@@ -1,6 +1,8 @@
 const path = require("path");
 const fs = require("fs");
+const config = require("../config");
 const { findPageBySlug } = require("../postToWordpress");
+
 // Extract the root URL (protocol and host) from a given URL
 function getRootUrl(url) {
   try {
@@ -39,6 +41,15 @@ function sanitizeFileName(url) {
   return url.replace(/^https?:\/\//, "").replace(/[^\w.-]+/g, "_");
 }
 
+// Transform a production URL to its staging equivalent
+function transformToStagingUrl(url) {
+  const parsedUrl = new URL(url);
+  // Remove any existing path from production URL
+  const cleanPath = parsedUrl.pathname.replace(/^\//, "").replace(/\/$/, "");
+  // Construct the new staging URL
+  return `https://${config.urls.staging}/${cleanPath}/`;
+}
+
 // Function to sort URLs by hierarchy depth
 function sortUrlsByHierarchy(urls) {
   const sortedUrls = urls.sort((a, b) => {
@@ -65,7 +76,7 @@ function sortUrlsByHierarchy(urls) {
 // Add this function to verify parent exists before processing
 async function verifyParentHierarchy(url) {
   const pathSegments = url
-    .replace(/^(?:https?:\/\/)?(?:www\.)?vancouver\.wsu\.edu\//, "")
+    .replace(/^(?:https?:\/\/)?(?:www\.)?[^/]+\//, "") // Remove domain part
     .split("/")
     .filter(Boolean);
 
@@ -104,4 +115,5 @@ module.exports = {
   sanitizeFileName,
   sortUrlsByHierarchy,
   verifyParentHierarchy,
+  transformToStagingUrl,
 };
