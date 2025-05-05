@@ -4,7 +4,7 @@ const path = require("path");
 // Configuration constants
 const KEYFILEPATH = path.join(process.cwd(), "service-account-key.json");
 const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
-const SHEET_ID = "1uWPWf878Jie60hoYcS9j_WkPQ8M6eRQetceDDe9uM6E";
+const SHEET_ID = process.env.SHEET_ID;
 
 // Sheet names
 const SHEET_NAMES = {
@@ -16,7 +16,7 @@ const COLUMNS = {
   ORIGINAL_LINK: "Original Link",
   ACTION: "Action",
   DATE_IMPORTED: "Date Imported",
-  COMPUTED_URL_FORMULA: "Computed URL Formula",
+  COMPUTED_URL_FORMULA: "New URL (editable)",
   WORDPRESS_LINK: "Wordpress Link",
 };
 
@@ -27,8 +27,8 @@ const ACTION_VALUES = {
 
 // Range constants
 const RANGES = {
-  ALL_COLUMNS: "A1:Z",
-  HEADERS: "A1:Z1",
+  ALL_COLUMNS: "A1:P",
+  HEADERS: "A1:P1",
 };
 
 async function getAuthToken() {

@@ -17,6 +17,7 @@ const {
   handleTables,
   handleHorizontalRules,
 } = require("./clean/");
+const { getRootUrl } = require("./utils/urls");
 
 async function transformToWPBlocks(contentHtml, originalUrl) {
   console.log("\n🔄 TRANSFORM START ---------------------");
@@ -28,10 +29,6 @@ async function transformToWPBlocks(contentHtml, originalUrl) {
     console.log("📊 Initial content stats:");
     console.log("- Total elements:", $("*").length);
     console.log("- Images found:", $("img").length);
-    console.log(
-      "- Main content area:",
-      $('div[role="main"]').length ? "Found" : "Not found"
-    );
     console.log("- Sections found:", $("section").length);
 
     const rootUrl = getRootUrl(originalUrl);
@@ -99,25 +96,6 @@ async function transformToWPBlocks(contentHtml, originalUrl) {
     console.error("💥 Error in transformToWPBlocks:", error);
     console.log("🔄 TRANSFORM END (WITH ERROR) ---------------------\n");
     throw error;
-  }
-}
-
-function ensureUrlProtocol(url) {
-  if (!/^https?:\/\//i.test(url)) {
-    return `https://${url}`;
-  }
-  return url;
-}
-
-// Extract the root URL (protocol and host) from a given URL
-function getRootUrl(url) {
-  try {
-    url = ensureUrlProtocol(url);
-    const parsedUrl = new URL(url);
-    return `${parsedUrl.protocol}//${parsedUrl.host}`;
-  } catch (error) {
-    console.error("Invalid URL:", error, "Input URL:", url);
-    return null;
   }
 }
 

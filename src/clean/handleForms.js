@@ -1,4 +1,4 @@
-function handleForms($) {
+function handleForms($, rootUrl) {
   // Handle <form> tags
   $("form").each((i, el) => {
     const action = $(el).attr("action");

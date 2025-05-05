@@ -8,7 +8,6 @@ const {
   postToWordPress,
   updateParentPage,
   getParentPageSlug,
-  findPageBySlug,
 } = require("./src/postToWordpress");
 const { transformToWPBlocks } = require("./src/cleanHtmlContent");
 const {
@@ -16,31 +15,24 @@ const {
   getUrlsFromSheet,
   updateSheetWithTimestamp,
 } = require("./src/updateGoogleSheet");
-
+const {
+  ensureUrlProtocol,
+  createDirectoriesFromUrl,
+  sanitizeFileName,
+  sortUrlsByHierarchy,
+  verifyParentHierarchy,
+} = require("./src/utils/urls");
+const { logMessage } = require("./src/utils/logs");
 // Load environment variables from a .env file if present
 require("dotenv").config();
 
 // Constants
 const ERROR_URL_FILE = "error_url.txt";
-const LOG_FILE = "crawling_log.txt";
 const CONCURRENCY_LIMIT = 5; // Adjust concurrency limit if needed
 const CRAWL_DELAY_MS = 0; // 2 seconds delay between requests
 const USER_AGENT =
   "EAB Crawler/1.0 (https://agency.eab.com/; bobsmith@eab.com)";
 const URL_PROCESS_LIMIT = 300; // Limit the number of URLs to process
-
-// Function to log messages to a file
-function logMessage(message) {
-  const timestamp = new Date().toISOString();
-  fs.appendFileSync(LOG_FILE, `[${timestamp}] ${message}\n`);
-}
-
-function ensureUrlProtocol(url) {
-  if (!/^https?:\/\//i.test(url)) {
-    return `https://${url}`;
-  }
-  return url;
-}
 
 function transformContentToWpBlocks(content) {
   // console.log("⭐��⭐ ~ transformContentToWpBlocks ~ content:", content);
@@ -95,25 +87,6 @@ function transformContentToWpBlocks(content) {
   return output;
 }
 
-// Create directories based on the original URL path
-function createDirectoriesFromUrl(url) {
-  const parsedUrl = new URL(url);
-  const domainFolder = parsedUrl.hostname;
-  const directoryPath = path.join(
-    __dirname,
-    "dist",
-    domainFolder,
-    parsedUrl.pathname
-  );
-  fs.mkdirSync(directoryPath, { recursive: true });
-  return directoryPath;
-}
-
-// Sanitize the file name by removing unwanted characters
-function sanitizeFileName(url) {
-  return url.replace(/^https?:\/\//, "").replace(/[^\w.-]+/g, "_");
-}
-
 async function processContent(
   contentResponse,
   originalUrl,
@@ -132,8 +105,8 @@ async function processContent(
   );
 
   // Log the full HTML structure for debugging
-  console.log(`📄 Page HTML structure:`);
-  console.log($("body").html().substring(0, 500) + "...");
+  // console.log(`📄 Page HTML structure:`);
+  // console.log($("body").html().substring(0, 500) + "...");
 
   const sections = $('div[role="main"] > div.row > section')
     .map((i, el) => $(el).html())
@@ -257,64 +230,6 @@ async function processContent(
   }
 }
 
-// Function to sort URLs by hierarchy depth
-function sortUrlsByHierarchy(urls) {
-  const sortedUrls = urls.sort((a, b) => {
-    const getDepth = (url) => {
-      const path = url.replace(
-        /^(?:https?:\/\/)?(?:www\.)?vancouver\.wsu\.edu\//,
-        ""
-      );
-      return (path.match(/\//g) || []).length;
-    };
-    return getDepth(a.computedUrl) - getDepth(b.computedUrl);
-  });
-
-  console.log("\n📋 Planned Processing Order:");
-  sortedUrls.forEach((url, index) => {
-    const depth = url.computedUrl.split("/").filter(Boolean).length - 1;
-    console.log(`${index + 1}. ${"  ".repeat(depth)}${url.computedUrl}`);
-  });
-  console.log("\n");
-
-  return sortedUrls;
-}
-
-// Add this function to verify parent exists before processing
-async function verifyParentHierarchy(url) {
-  const pathSegments = url
-    .replace(/^(?:https?:\/\/)?(?:www\.)?vancouver\.wsu\.edu\//, "")
-    .split("/")
-    .filter(Boolean);
-
-  console.log(`\n🔍 HIERARCHY CHECK START ---------------------`);
-  console.log(`📍 Checking hierarchy for: ${url}`);
-  console.log(`📚 Path segments:`, pathSegments);
-  console.log(`📏 Segment count: ${pathSegments.length}`);
-
-  // If this is a root page, no verification needed
-  if (pathSegments.length <= 1) {
-    console.log(`🌱 Root-level page, no parent check needed`);
-    console.log(`🔍 HIERARCHY CHECK END ---------------------\n`);
-    return true;
-  }
-
-  // Only check up to the immediate parent
-  const parentPath = pathSegments.slice(0, -1).join("/");
-  console.log(`👆 Checking immediate parent: ${parentPath}`);
-
-  const parentId = await findPageBySlug(parentPath);
-  if (!parentId) {
-    console.log(`❌ Parent not found: ${parentPath}`);
-    console.log(`🔍 HIERARCHY CHECK END ---------------------\n`);
-    return false;
-  }
-
-  console.log(`✅ Parent exists with ID: ${parentId}`);
-  console.log(`🔍 HIERARCHY CHECK END ---------------------\n`);
-  return true;
-}
-
 // Complete fetchUrl function with hierarchy verification
 async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
   try {
@@ -408,47 +323,14 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
   }
 }
 
-// Function to test a specific URL
-async function testSpecificUrl(originalUrl, computedUrl) {
-  try {
-    const totalUrls = 1;
-    const currentUrl = 1;
-
-    // Ensure the URLs have the correct protocol
-    originalUrl = ensureUrlProtocol(originalUrl);
-    computedUrl = ensureUrlProtocol(computedUrl);
-
-    // Fetch and process the URL
-    const result = await fetchUrl(
-      originalUrl,
-      computedUrl,
-      currentUrl,
-      totalUrls
-    );
-
-    if (result.pageId) {
-      console.log(`✨ Page created successfully with ID: ${result.pageId}`);
-    } else {
-      console.log(`⚠️  Page creation failed`);
-    }
-  } catch (error) {
-    console.error("Error:", error);
-  }
-}
-
-// Test the specific URL
-const originalUrl = "https://studentaffairs.vancouver.wsu.edu/elca";
-const computedUrl = "https://vancouver.wsu.edu/academics";
-testSpecificUrl(originalUrl, computedUrl);
-
 // Main function to process URLs from the Google Sheet
-async function checkUrls() {
+async function checkUrls(customUrls = null) {
   try {
     const auth = await getAuthToken();
-    let urls = await getUrlsFromSheet(auth);
+    let urls = customUrls || (await getUrlsFromSheet(auth));
 
     if (urls.length === 0) {
-      console.error("No URLs found in the Google Sheet.");
+      console.error("No URLs found.");
       process.exit(1);
     }
 
@@ -576,5 +458,13 @@ async function checkUrls() {
   }
 }
 
+const customUrls = [
+  {
+    originalUrl:
+      "https://studentaffairs.vancouver.wsu.edu/registrars-office/course-catalog",
+    computedUrl: "https://vancouver.wsu.edu/academics/academic-calendar",
+  },
+];
+
 // Start the URL checking process
-// checkUrls();
+checkUrls();
