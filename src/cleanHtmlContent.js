@@ -16,10 +16,18 @@ const {
   handleLists,
   handleTables,
   handleHorizontalRules,
+  removeScripts,
+  handleImageLinks,
+  handleSocialLinks,
+  handleAccordions,
 } = require("./clean/");
 const { getRootUrl } = require("./utils/urls");
 
-async function transformToWPBlocks(contentHtml, originalUrl) {
+async function transformToWPBlocks(
+  contentHtml,
+  originalUrl,
+  mediaResults = []
+) {
   console.log("\n🔄 TRANSFORM START ---------------------");
   console.log("🌐 Original URL:", originalUrl);
 
@@ -37,61 +45,48 @@ async function transformToWPBlocks(contentHtml, originalUrl) {
       throw new Error(`Invalid root URL derived from: ${originalUrl}`);
     }
 
-    // Remove commented-out content
+    // Log media results before processing
+    console.log("DEBUG: Media results before processing:", mediaResults);
+
+    // Process the content
+    removeScripts($);
+    handleSocialLinks($);
     removeComments($);
-
-    // Remove specific <a> tags
     removeSpecificTags($);
-
-    // Handle <iframe> tags
     handleIframes($);
-
-    // Replace <span> tags but keep their content
     replaceSpans($);
-
-    // Wrap video container content in <p>
     wrapVideoContainers($);
-
-    // Handle images with proper URL resolution
-    handleImages($, rootUrl);
-
-    // Handle blockquotes
+    handleImageLinks($);
+    handleImages($, rootUrl, mediaResults); // This will now have the media results
     handleBlockquotes($);
-
-    // Clean up content
+    handleAccordions($);
     cleanUpContent($);
-
-    // Handle paragraphs
     handleParagraphs($);
-
-    // Convert <a> tags with class 'btn' to WordPress button blocks
     handleButtons($);
-
-    // Handle <form> tags
     handleForms($, rootUrl);
-
-    // Handle headings
     handleHeadings($);
-
-    // Handle lists
     handleLists($);
-
-    // Handle tables
     handleTables($);
-
-    // Handle horizontal rules
     handleHorizontalRules($);
 
-    // Final cleanup and return
-    const finalContent = $("body")
-      .html()
-      .replace(/^\s*[\r\n]/gm, "")
-      .replace(/^\s+/gm, "");
+    console.log("🧹 Starting content cleanup...");
+    let content = $.html();
 
-    console.log("✅ Content transformation complete");
+    // Clean up any remaining artifacts
+    content = content
+      .replace(/\s+/g, " ")
+      .replace(/> </g, ">\n<")
+      .replace(/<!--\s*wp:/g, "<!-- wp:")
+      .replace(/-->\s*</g, "-->\n<")
+      .trim();
+
+    console.log("✨ Content cleanup complete");
     console.log("🔄 TRANSFORM END ---------------------\n");
 
-    return Promise.resolve(finalContent);
+    return {
+      content,
+      images: [], // We don't need to extract images here anymore
+    };
   } catch (error) {
     console.error("💥 Error in transformToWPBlocks:", error);
     console.log("🔄 TRANSFORM END (WITH ERROR) ---------------------\n");
@@ -99,4 +94,6 @@ async function transformToWPBlocks(contentHtml, originalUrl) {
   }
 }
 
-module.exports = { transformToWPBlocks };
+module.exports = {
+  transformToWPBlocks,
+};

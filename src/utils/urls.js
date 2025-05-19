@@ -27,7 +27,7 @@ function createDirectoriesFromUrl(url) {
   const parsedUrl = new URL(url);
   const domainFolder = parsedUrl.hostname;
   const directoryPath = path.join(
-    __dirname,
+    process.cwd(),
     "dist",
     domainFolder,
     parsedUrl.pathname
@@ -41,21 +41,45 @@ function sanitizeFileName(url) {
   return url.replace(/^https?:\/\//, "").replace(/[^\w.-]+/g, "_");
 }
 
-// Transform a production URL to its staging equivalent
+// Transform URLs for different environments
+function transformUrl(url, environment = process.env.NODE_ENV) {
+  // Clean the path - remove leading/trailing slashes
+  const cleanPath = url.startsWith("http")
+    ? new URL(url).pathname.replace(/^\/|\/$/g, "")
+    : url.replace(/^\/|\/$/g, "");
+
+  // Get the appropriate domain based on environment
+  const domain =
+    environment === "production" ? config.urls.production : config.urls.staging;
+
+  if (!domain) {
+    throw new Error(`Domain not configured for environment: ${environment}`);
+  }
+
+  // Special handling for home page
+  if (cleanPath === "home" || cleanPath === "") {
+    return `https://${domain}`;
+  }
+
+  return `https://${domain}/${cleanPath}`;
+}
+
+// Maintain backward compatibility
 function transformToStagingUrl(url) {
-  const parsedUrl = new URL(url);
-  // Remove any existing path from production URL
-  const cleanPath = parsedUrl.pathname.replace(/^\//, "").replace(/\/$/, "");
-  // Construct the new staging URL
-  return `https://${config.urls.staging}/${cleanPath}/`;
+  return transformUrl(url, "staging");
 }
 
 // Function to sort URLs by hierarchy depth
 function sortUrlsByHierarchy(urls) {
+  const domain =
+    process.env.NODE_ENV === "production"
+      ? config.urls.production
+      : config.urls.staging;
+
   const sortedUrls = urls.sort((a, b) => {
     const getDepth = (url) => {
       const path = url.replace(
-        /^(?:https?:\/\/)?(?:www\.)?vancouver\.wsu\.edu\//,
+        new RegExp(`^(?:https?:\/\/)?(?:www\.)?${domain}\/`),
         ""
       );
       return (path.match(/\//g) || []).length;
@@ -66,9 +90,8 @@ function sortUrlsByHierarchy(urls) {
   console.log("\n📋 Planned Processing Order:");
   sortedUrls.forEach((url, index) => {
     const depth = url.computedUrl.split("/").filter(Boolean).length - 1;
-    console.log(`${index + 1}. ${"  ".repeat(depth)}${url.computedUrl}`);
+    console.log(`  ${index + 1}. [Depth: ${depth}] ${url.computedUrl}`);
   });
-  console.log("\n");
 
   return sortedUrls;
 }
@@ -85,14 +108,14 @@ async function verifyParentHierarchy(url) {
   console.log(`📚 Path segments:`, pathSegments);
   console.log(`📏 Segment count: ${pathSegments.length}`);
 
-  // If this is a root page, no verification needed
-  if (pathSegments.length <= 1) {
+  // If this is a root page or empty path, no verification needed
+  if (pathSegments.length <= 1 || !pathSegments[0]) {
     console.log(`🌱 Root-level page, no parent check needed`);
     console.log(`🔍 HIERARCHY CHECK END ---------------------\n`);
     return true;
   }
 
-  // Only check up to the immediate parent
+  // Check the immediate parent
   const parentPath = pathSegments.slice(0, -1).join("/");
   console.log(`👆 Checking immediate parent: ${parentPath}`);
 
@@ -116,4 +139,5 @@ module.exports = {
   sortUrlsByHierarchy,
   verifyParentHierarchy,
   transformToStagingUrl,
+  transformUrl,
 };

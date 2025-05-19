@@ -1,0 +1,73 @@
+services:
+  wordpress:
+    image: wordpress:${WORDPRESS_VERSION:-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-wordpress}
+    volumes:
+      - ./config/php.conf.ini:/usr/local/etc/php/conf.d/php.ini
+      - ${WORDPRESS_DATA_DIR:-./wordpress}:/var/www/html
+    environment:
+      - WORDPRESS_DB_NAME=${COMPOSE_PROJECT_NAME:-wordpress}
+      - WORDPRESS_TABLE_PREFIX=${WORDPRESS_TABLE_PREFIX:-wp_}
+      - WORDPRESS_DB_HOST=${WORDPRESS_DB_HOST:-mysql}
+      - WORDPRESS_DB_USER=${DATABASE_USER:-root}
+      - WORDPRESS_DB_PASSWORD=${DATABASE_PASSWORD:-password}
+      - WP_ENVIRONMENT_TYPE=local
+    depends_on:
+      - mysql
+    restart: always
+    ports:
+      - 80:80
+
+  mysql:
+    image: mariadb:${MARIADB_VERSION:-latest}
+    container_name: ${COMPOSE_PROJECT_NAME}_mysql
+    volumes:
+      - ./mysql:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DATABASE_PASSWORD:-password}
+      - MYSQL_USER=${DATABASE_USER:-root}
+      - MYSQL_PASSWORD=${DATABASE_PASSWORD:-password}
+      - MYSQL_DATABASE=${COMPOSE_PROJECT_NAME:-wordpress}
+    restart: always
+
+  # Command line interface to wordpress
+  # wpcli:
+  #   build: ./wpcli/
+  #   image: wpcli
+  #   container_name: ${COMPOSE_PROJECT_NAME}_wpcli
+  #   volumes:
+  #     - ${WORDPRESS_DATA_DIR:-./wordpress}:/var/www/html
+  #   working_dir: /var/www/html
+  wordpress-cli:
+    image: wordpress:cli
+    volumes:
+      - ${WORDPRESS_DATA_DIR:-./wordpress}:/var/www/html
+    working_dir: /var/www/html
+    depends_on:
+      - mysql
+      - wordpress
+    user: "33:33"
+    environment:
+      - WORDPRESS_DB_NAME=${COMPOSE_PROJECT_NAME:-wordpress}
+      - WORDPRESS_TABLE_PREFIX=${WORDPRESS_TABLE_PREFIX:-wp_}
+      - WORDPRESS_DB_HOST=${WORDPRESS_DB_HOST:-mysql}
+      - WORDPRESS_DB_USER=${DATABASE_USER:-root}
+      - WORDPRESS_DB_PASSWORD=${DATABASE_PASSWORD:-password}
+      - WP_CLI_PROTOCOL=http
+      - WP_CLI_DOMAIN=localhost
+      - WP_ENVIRONMENT_TYPE=local
+    command: >
+      /bin/sh -c '
+      until mysqladmin ping -h$$WORDPRESS_DB_HOST -u$$WORDPRESS_DB_USER -p$$WORDPRESS_DB_PASSWORD --silent; do
+        sleep 1
+        echo "Waiting for MySQL to be ready..."
+      done &&
+      sleep 10 &&
+      wp core install 
+      --url=http://localhost 
+      --title=Example 
+      --admin_user=supervisor 
+      --admin_password=strongpassword 
+      --admin_email=info@example.com'
+      && wp option update permalink_structure '/%postname%/'
+  # Check availability of essential services

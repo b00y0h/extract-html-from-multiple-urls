@@ -13,6 +13,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "migrate": "node index.js"
+    "migrate": "NODE_ENV=staging node index.js",
+    "migrate:staging": "NODE_ENV=staging node index.js",
+    "migrate:production": "NODE_ENV=production node index.js"
   }
 }

@@ -9,6 +9,7 @@ const {
   postToWordPress,
   updateParentPage,
   getParentPageSlug,
+  processImage,
 } = require("./src/postToWordpress");
 const { transformToWPBlocks } = require("./src/cleanHtmlContent");
 const {
@@ -23,8 +24,11 @@ const {
   sortUrlsByHierarchy,
   verifyParentHierarchy,
   transformToStagingUrl,
+  transformUrl,
+  getRootUrl,
 } = require("./src/utils/urls");
 const { logMessage } = require("./src/utils/logs");
+const { log } = require("console");
 // Load environment variables from a .env file if present
 require("dotenv").config();
 
@@ -91,6 +95,62 @@ function transformContentToWpBlocks(content) {
   return output;
 }
 
+// New function to process images before sending to WordPress
+async function processContentImages(content, images) {
+  if (!images || images.length === 0) {
+    return { content, successfulMedia: [] };
+  }
+
+  console.log(`🔄 Processing ${images.length} images for content...`);
+
+  // Process each image
+  const successfulMedia = [];
+  let updatedContent = content;
+
+  for (const image of images) {
+    try {
+      console.log(`📸 Processing image: ${image.url}`);
+
+      // Check if images directory exists
+      console.log(`DEBUG: Image directory path: ${config.paths.imagesDir}`);
+      console.log(
+        `DEBUG: Directory exists: ${fs.existsSync(config.paths.imagesDir)}`
+      );
+
+      // Ensure the images directory exists
+      if (!fs.existsSync(config.paths.imagesDir)) {
+        console.log(
+          `DEBUG: Creating images directory: ${config.paths.imagesDir}`
+        );
+        fs.mkdirSync(config.paths.imagesDir, { recursive: true, mode: 0o755 });
+        console.log(`DEBUG: Images directory created`);
+      }
+
+      const result = await processImage(image);
+      if (result) {
+        successfulMedia.push(result);
+
+        // Replace the image URL in the content
+        const originalUrl = image.url;
+        const wpUrl = result.wordpressUrl;
+
+        // Use a regex that handles both quoted and unquoted URLs
+        const urlRegex = new RegExp(
+          originalUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+          "g"
+        );
+        updatedContent = updatedContent.replace(urlRegex, wpUrl);
+
+        console.log(`✅ Replaced image URL: ${originalUrl} → ${wpUrl}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error processing image: ${error.message}`);
+    }
+  }
+
+  return { content: updatedContent, successfulMedia };
+}
+
 async function processContent(
   contentResponse,
   originalUrl,
@@ -101,51 +161,99 @@ async function processContent(
   console.log(`\n🔄 CONTENT PROCESSING START ---------------------`);
   console.log(`📝 Processing content for: ${computedUrl}`);
 
-  const $ = cheerio.load(contentResponse.data);
+  if (!contentResponse) {
+    // ...existing code for empty content...
+  }
 
-  // Log the HTML structure we're trying to parse
+  const $ = cheerio.load(contentResponse.data);
   console.log(
     `🔍 Looking for sections with selector: div[role="main"] > div.row > section`
   );
-
-  // Log the full HTML structure for debugging
-  // console.log(`📄 Page HTML structure:`);
-  // console.log($("body").html().substring(0, 500) + "...");
 
   const sections = $('div[role="main"] > div.row > section')
     .map((i, el) => $(el).html())
     .get();
 
   console.log(`📊 Found ${sections.length} sections`);
-  let imageUrls = [];
 
   if (sections.length) {
     console.log(`✅ Found content sections, proceeding with processing`);
 
-    // join the sections
+    // Join the sections
     const contentHtml = sections.join("\n");
     console.log(`📦 Combined section length: ${contentHtml.length} characters`);
 
-    // transform the content to WP blocks using the original URL
-    console.log(`🔄 Transforming content to WP blocks...`);
-    const transformedToWPContent = await transformToWPBlocks(
-      contentHtml,
-      originalUrl
-    );
-    console.log(`✅ Content transformed`);
+    // Extract images first
+    console.log(`🔍 Extracting images from content...`);
+    const images = [];
+    const tempDoc = cheerio.load(contentHtml);
+    tempDoc("img").each((i, el) => {
+      let src = tempDoc(el).attr("src");
+      const alt = tempDoc(el).attr("alt") || "";
+      const title = tempDoc(el).attr("title") || "";
 
-    const content$ = cheerio.load(transformedToWPContent);
+      if (src) {
+        const rootUrl = getRootUrl(originalUrl);
+        if (src.startsWith("/")) {
+          src = `${rootUrl}${src}`;
+        } else if (!src.startsWith("http")) {
+          src = `${rootUrl}/${src}`;
+        }
 
-    // grab all the image urls out of the contentHtml
-    console.log(`🖼️  Scanning for images...`);
-    content$("img").each((i, el) => {
-      const imageUrl = content$(el).attr("src");
-      const imageAlt = content$(el).attr("alt");
-      if (imageUrl) {
-        imageUrls.push({ url: imageUrl, alt: imageAlt });
+        images.push({
+          url: src,
+          alt,
+          title,
+        });
       }
     });
-    console.log(`📸 Found ${imageUrls.length} images`);
+
+    console.log(`📸 Found ${images.length} images to process`);
+
+    // Process all images first
+    let successfulMedia = [];
+    if (images.length > 0) {
+      try {
+        const mediaResults = await Promise.allSettled(
+          images.map(async (image) => {
+            try {
+              return await processImage(image);
+            } catch (error) {
+              console.log(
+                `⚠️ Failed to process image ${image.url}: ${error.message}`
+              );
+              return null;
+            }
+          })
+        );
+
+        // Filter out failed image processing attempts and log results
+        successfulMedia = mediaResults
+          .filter((result) => result.status === "fulfilled" && result.value)
+          .map((result) => result.value);
+
+        console.log(
+          `✅ Successfully processed ${successfulMedia.length} images`
+        );
+        console.log("DEBUG: Successful media results:", successfulMedia);
+      } catch (error) {
+        console.log(
+          `⚠️ Image processing failed but continuing: ${error.message}`
+        );
+      }
+    }
+
+    // Now transform the content WITH the media results
+    console.log(
+      `🔄 Transforming content with ${successfulMedia.length} processed images...`
+    );
+    const transformResult = await transformToWPBlocks(
+      contentHtml,
+      originalUrl,
+      successfulMedia // Pass the processed media results
+    );
+
+    let transformedToWPContent = transformResult.content;
 
     // Save the content to a file
     console.log(`💾 Saving content to file...`);
@@ -155,6 +263,7 @@ async function processContent(
     fs.writeFileSync(filePath, transformedToWPContent);
     console.log(`✅ Content saved to: ${filePath}`);
 
+    // ...rest of the code...
     console.log(`Finished: ${currentUrl} of ${totalUrls}: ✅ : ${computedUrl}`);
     logMessage(
       `Successfully processed: ${computedUrl} - Status: ${contentResponse.status}`
@@ -172,19 +281,12 @@ async function processContent(
 
     // Extract the page meta description
     const metaDescription = $('meta[name="description"]').attr("content");
-    console.log(`📝 Meta description: ${metaDescription || "None found"}`);
+    // console.log(`📝 Meta description: ${metaDescription || "None found"}`);
 
-    // Clean up the slug
-    console.log(`🔧 Processing slug...`);
-    let slug = computedUrl
-      .replace(new RegExp(`^${config.urls.production}\/`), "") // Remove production domain
-      .replace(new RegExp(`^${config.urls.staging}\/`), "") // Remove staging domain
-      .replace(/\/$/, ""); // Remove trailing slash
-
-    // Ensure we don't have duplicate path segments
-    const pathSegments = [...new Set(slug.split("/"))];
-    slug = pathSegments.join("/");
-    console.log(`🏷️  Final slug: ${slug}`);
+    // Clean the slug
+    const slug = computedUrl
+      .replace(/^(?:https?:\/\/)?(?:[^\/]+)/, "")
+      .replace(/^\/+|\/+$/g, "");
 
     const post = {
       title: pageTitle,
@@ -193,8 +295,10 @@ async function processContent(
       meta: {
         description: metaDescription,
       },
-      slug: slug,
-      images: imageUrls,
+      slug: slug || "",
+      featuredMediaId:
+        successfulMedia.length > 0 ? successfulMedia[0].id : null,
+      successfulMedia: successfulMedia,
     };
 
     console.log(`📤 Sending to WordPress...`);
@@ -241,35 +345,119 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     // Apply rate limiting for content fetching
     await sleep(config.crawler.crawlDelayMs);
 
-    // Ensure the URLs have the correct protocol
-    originalUrl = ensureUrlProtocol(originalUrl);
-    computedUrl = transformToStagingUrl(originalUrl);
+    // For Create actions, we won't have an originalUrl
+    if (!originalUrl) {
+      console.log(`\n🚀 PROCESSING START (Create) -------------------------`);
+      console.log(`📍 Processing URL ${currentUrl} of ${totalUrls}`);
+      console.log(`🎯 Destination URL: ${computedUrl}`);
 
-    // Determine the target URL, following redirects if necessary
-    const targetUrl = originalUrl;
+      // Get clean path segments
+      const pathSegments = computedUrl
+        .replace(/^(?:https?:\/\/)?(?:www\.)?[^/]+\//, "")
+        .split("/")
+        .filter(Boolean);
 
-    // Add the debug section here, after protocol checks but before any processing
-    console.log("\n🔍 URL ANALYSIS -------------------------");
-    console.log("Original URL:", originalUrl);
-    console.log("Computed URL:", computedUrl);
-    console.log("URL components:");
-    console.log("- Protocol:", new URL(computedUrl).protocol);
-    console.log("- Host:", new URL(computedUrl).host);
-    console.log("- Pathname:", new URL(computedUrl).pathname);
-    console.log(
-      "- Encoded pathname:",
-      encodeURIComponent(new URL(computedUrl).pathname)
-    );
-    console.log("🔍 URL ANALYSIS END ---------------------\n");
+      const currentSlug = pathSegments[pathSegments.length - 1];
+      console.log(`📚 Path segments:`, pathSegments);
+      console.log(`🏷️  Current slug: ${currentSlug}`);
+
+      // Verify parent hierarchy
+      console.log(`🔍 Verifying parent hierarchy...`);
+      const hierarchyValid = await verifyParentHierarchy(computedUrl);
+      if (!hierarchyValid) {
+        console.log(`⚠️ Skipping ${computedUrl} - parent hierarchy incomplete`);
+        console.log(`🚀 PROCESSING END -------------------------\n`);
+        return { url: computedUrl, pageId: null };
+      }
+      console.log(`✅ Parent hierarchy verified`);
+
+      // Process empty content for new page
+      const result = await processContent(
+        null,
+        null,
+        computedUrl,
+        currentUrl,
+        totalUrls
+      );
+
+      if (result.pageId) {
+        console.log(`✨ Page created successfully with ID: ${result.pageId}`);
+      } else {
+        console.log(`⚠️  Page creation failed`);
+      }
+
+      console.log(`🚀 PROCESSING END -------------------------\n`);
+      return result;
+    }
 
     console.log(`\n🚀 PROCESSING START -------------------------`);
     console.log(`📍 Processing URL ${currentUrl} of ${totalUrls}`);
     console.log(`🔗 Original URL: ${originalUrl}`);
-    console.log(`🎯 Computed URL: ${computedUrl}`);
+    console.log(`🎯 Destination URL: ${computedUrl}`);
 
-    // Get clean path segments
+    // Configure axios to follow redirects and track them
+    const axiosConfig = {
+      httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+      headers: {
+        "User-Agent": config.crawler.userAgent,
+      },
+      maxRedirects: 10,
+      validateStatus: function (status) {
+        return status >= 200 && status < 400;
+      },
+      maxRedirects: 5, // Limit redirects to prevent infinite loops
+    };
+
+    // Perform initial HEAD request to check for redirects
+    console.log(`🔄 Checking for redirects...`);
+    const headResponse = await axios
+      .head(originalUrl, axiosConfig)
+      .catch((e) => {
+        console.log(`⚠️ HEAD request failed:`, e.message);
+        return e.response;
+      });
+
+    const finalUrl = headResponse?.request?.res?.responseUrl || originalUrl;
+
+    if (finalUrl !== originalUrl) {
+      console.log(`⚠️ Redirect chain detected:`);
+      console.log(`⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️ Original URL: ${originalUrl}`);
+      console.log(`Final URL: ${finalUrl}`);
+
+      // Verify if the redirect is expected
+      if (!finalUrl.includes(originalUrl.replace(/\/$/, ""))) {
+        console.log(`❌ WARNING: Unexpected redirect detected!`);
+        console.log(`The page is redirecting to an unrelated URL.`);
+        throw new Error(`Unexpected redirect to ${finalUrl}`);
+      }
+    }
+
+    // Fetch content from the final URL
+    console.log(`📥 Fetching content from final URL: ${finalUrl}`);
+    const contentResponse = await axios.get(finalUrl, {
+      ...axiosConfig,
+      // Track redirects during the GET request
+      beforeRedirect: (options, { headers }) => {
+        console.log(`↪️ Redirecting to: ${options.href}`);
+      },
+    });
+
+    // Verify the final URL matches what we expect
+    const actualFinalUrl = contentResponse.request.res.responseUrl;
+    if (actualFinalUrl !== finalUrl) {
+      console.log(`❌ WARNING: GET request was redirected unexpectedly`);
+      console.log(`Expected: ${finalUrl}`);
+      console.log(`Actual: ${actualFinalUrl}`);
+      throw new Error(
+        `Unexpected redirect during GET request to ${actualFinalUrl}`
+      );
+    }
+
+    console.log(`✅ Content fetched successfully from ${actualFinalUrl}`);
+
+    // Get clean path segments, excluding the eab prefix
     const pathSegments = computedUrl
-      .replace(/^(?:https?:\/\/)?(?:www\.)?vancouver\.wsu\.edu\//, "")
+      .replace(/^(?:https?:\/\/)?(?:www\.)?[^/]+\//, "")
       .split("/")
       .filter(Boolean);
 
@@ -286,16 +474,6 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
       return { url: computedUrl, pageId: null };
     }
     console.log(`✅ Parent hierarchy verified`);
-
-    // Perform a GET request to fetch the content
-    console.log(`📥 Fetching content from: ${targetUrl}`);
-    const contentResponse = await axios.get(targetUrl, {
-      httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-      headers: {
-        "User-Agent": config.crawler.userAgent,
-      },
-    });
-    console.log(`✅ Content fetched successfully`);
 
     // Process the fetched content
     const result = await processContent(
@@ -317,9 +495,8 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
   } catch (error) {
     // Log errors and append to the error file
     const errorMessage = `Error processing URL ${originalUrl}: ${error.message}`;
-    fs.appendFileSync(ERROR_URL_FILE, `${errorMessage}\n`);
+    logMessage(`${errorMessage}\n`, ERROR_URL_FILE);
     console.error(`💥 ${errorMessage}`);
-    logMessage(errorMessage);
 
     if (error.response) {
       const responseDetails = `Response status: ${

@@ -1,0 +1,48 @@
+[2025-05-06T21:34:04.758Z] Page: https://www.vancouver.wsu.edu
+Form Action: http://washingtonstateuniversityvancouver.createsend.com/t/r/s/thlihkl/
+[2025-05-06T21:44:23.521Z] Page: https://www.vancouver.wsu.edu
+Form Action: http://washingtonstateuniversityvancouver.createsend.com/t/r/s/thlihkl/
+[2025-05-07T01:09:40.963Z] Page: https://www.vancouver.wsu.edu
+Form Action: http://washingtonstateuniversityvancouver.createsend.com/t/r/s/thlihkl/
+[2025-05-07T14:47:16.905Z] Page: https://www.vancouver.wsu.edu
+Form Action: http://washingtonstateuniversityvancouver.createsend.com/t/r/s/thlihkl/
+[2025-05-19T13:48:35.424Z] 
+=== FORM FOUND ===
+Page URL: https://www.vancouver.wsu.edu
+Form Action: http://washingtonstateuniversityvancouver.createsend.com/t/r/s/thlihkl/
+Form Method: post
+Form ID: 
+Form Fields:
+  - email: cm-thlihkl-thlihkl
+==================
+
+[2025-05-19T14:08:48.950Z] 
+=== FORM FOUND ===
+Page URL: https://www.vancouver.wsu.edu
+Form Action: http://washingtonstateuniversityvancouver.createsend.com/t/r/s/thlihkl/
+Form Method: post
+Form ID: 
+Form Fields:
+  - email: cm-thlihkl-thlihkl
+==================
+
+[2025-05-19T14:20:38.238Z] 
+=== FORM FOUND ===
+Page URL: https://www.vancouver.wsu.edu
+Form Action: http://washingtonstateuniversityvancouver.createsend.com/t/r/s/thlihkl/
+Form Method: post
+Form ID: 
+Form Fields:
+  - email: cm-thlihkl-thlihkl
+==================
+
+[2025-05-19T19:51:06.937Z] 
+=== FORM FOUND ===
+Page URL: https://www.vancouver.wsu.edu
+Form Action: http://washingtonstateuniversityvancouver.createsend.com/t/r/s/thlihkl/
+Form Method: post
+Form ID: 
+Form Fields:
+  - email: cm-thlihkl-thlihkl
+==================
+

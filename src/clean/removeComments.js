@@ -5,15 +5,11 @@ function removeComments($) {
       $this
         .contents()
         .filter(function () {
-          return (
-            this.type === "comment" &&
-            this.data.includes("<") &&
-            this.data.includes(">")
-          );
+          return this.type === "comment";
         })
         .remove();
     });
-    console.log("✅ Removed commented content");
+    console.log("✅ Removed all HTML comments");
   } catch (error) {
     console.error("❌ Error removing comments:", error.message);
   }

@@ -13,6 +13,10 @@ const { handleHeadings } = require("./handleHeadings");
 const { handleButtons } = require("./handleButtons");
 const { handleForms } = require("./handleForms");
 const { handleImages } = require("./handleImages");
+const { removeScripts } = require("./removeScripts");
+const { handleImageLinks } = require("./handleImageLinks");
+const { handleSocialLinks } = require("./handleSocialLinks");
+const { handleAccordions } = require("./handleAccordions");
 
 module.exports = {
   removeSpecificTags,
@@ -30,4 +34,8 @@ module.exports = {
   handleButtons,
   handleForms,
   handleImages,
+  removeScripts,
+  handleImageLinks,
+  handleSocialLinks,
+  handleAccordions,
 };

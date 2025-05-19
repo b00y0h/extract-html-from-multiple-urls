@@ -1,22 +1,24 @@
 require("dotenv").config();
+const path = require("path");
 
 module.exports = {
   // WordPress API settings
   wordpress: {
-    apiBaseUrl:
-      process.env.WP_API_BASE_URL || "https://wsuwp.vancouver.wsu.edu/eab/",
+    apiBaseUrl: process.env.WP_API_BASE_URL
+      ? process.env.WP_API_BASE_URL.replace(/\/+$/, "")
+      : "",
     userAgent:
       process.env.WP_USER_AGENT ||
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36",
     username: process.env.WP_API_USERNAME,
     password: process.env.WP_API_PASSWORD,
-    rateLimitMs: 2000, // 2 seconds between WordPress API requests
+    rateLimitMs: 1000, // 2 seconds between WordPress API requests
   },
 
   // URL configuration
   urls: {
-    production: "vancouver.wsu.edu",
-    staging: process.env.STAGING_URL || "wsuwp.vancouver.wsu.edu/eab",
+    production: process.env.PRODUCTION_URL || "",
+    staging: process.env.STAGING_URL || "",
   },
 
   // Content fetching settings
@@ -24,7 +26,7 @@ module.exports = {
     concurrencyLimit: 5,
     crawlDelayMs: 2000, // 2 seconds between content fetches
     userAgent: "EAB Crawler/1.0 (https://agency.eab.com/; bobsmith@eab.com)",
-    urlProcessLimit: 300,
+    urlProcessLimit: 2,
   },
 
   // File paths
@@ -32,6 +34,7 @@ module.exports = {
     errorUrlFile: "error_url.txt",
     apiLogFile: "API_log.txt",
     crawlingLogFile: "crawling_log.txt",
-    imagesDir: "images", // Directory to store downloaded images
+    formLogFile: "form_log.txt",
+    imagesDir: path.join(process.cwd(), "images"), // Directory to store downloaded images
   },
 };

@@ -13,16 +13,17 @@ const SHEET_NAMES = {
 
 // Column names
 const COLUMNS = {
-  ORIGINAL_LINK: "Original Link",
+  ORIGINAL_LINK: "Source",
   ACTION: "Action",
   DATE_IMPORTED: "Date Imported",
-  COMPUTED_URL_FORMULA: "New URL (editable)",
+  COMPUTED_URL_FORMULA: "Destination",
   WORDPRESS_LINK: "Wordpress Link",
 };
 
 // Action values
 const ACTION_VALUES = {
   MOVE: "Move",
+  CREATE: "Create",
 };
 
 // Range constants
@@ -115,7 +116,13 @@ async function getUrlsFromSheet(auth) {
       const action = row[actionColumnIndex]?.trim();
       const url = row[computedUrlFormulaColumnIndex];
       const dateImported = row[dateImportedColumnIndex];
-      return action === ACTION_VALUES.MOVE && url && !dateImported;
+
+      if (action === ACTION_VALUES.MOVE) {
+        return url && !dateImported;
+      } else if (action === ACTION_VALUES.CREATE) {
+        return !dateImported;
+      }
+      return false;
     });
 
     console.log(`Total filtered rows: ${filteredRows.length}`);

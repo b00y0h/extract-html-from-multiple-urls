@@ -5,6 +5,10 @@ error_url.txt
 urls-full.txt
 API_log.txt
 service-account-key.json
+images/
+mysql/
+wordpress/
+dist/
 # Logs
 
 logs
