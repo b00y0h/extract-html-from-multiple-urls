@@ -26,7 +26,7 @@ module.exports = {
     concurrencyLimit: 5,
     crawlDelayMs: 2000, // 2 seconds between content fetches
     userAgent: "EAB Crawler/1.0 (https://agency.eab.com/; bobsmith@eab.com)",
-    urlProcessLimit: 2,
+    urlProcessLimit: 200,
   },
 
   // File paths

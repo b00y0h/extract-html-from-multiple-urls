@@ -522,8 +522,17 @@ async function checkUrls(customUrls = null) {
       process.exit(1);
     }
 
-    // Sort URLs by hierarchy
-    urls = sortUrlsByHierarchy(urls);
+    // URLs are already sorted by priority from getUrlsFromSheet
+    // Additional sort by hierarchy while maintaining priority order
+    const priorityUrls = urls.filter((url) => url.processFirst);
+    const nonPriorityUrls = urls.filter((url) => !url.processFirst);
+
+    // Sort each group by hierarchy
+    const sortedPriorityUrls = sortUrlsByHierarchy(priorityUrls);
+    const sortedNonPriorityUrls = sortUrlsByHierarchy(nonPriorityUrls);
+
+    // Combine the sorted groups
+    urls = [...sortedPriorityUrls, ...sortedNonPriorityUrls];
 
     // Limit the number of URLs to process
     urls = urls.slice(0, URL_PROCESS_LIMIT);
@@ -531,7 +540,10 @@ async function checkUrls(customUrls = null) {
     console.log("\n📊 URL Processing Order:");
     urls.forEach((url, index) => {
       const depth = (url.computedUrl.match(/\//g) || []).length;
-      console.log(`${index + 1}. ${"  ".repeat(depth)}${url.computedUrl}`);
+      const priority = url.processFirst ? "🔥 PRIORITY" : "  Regular";
+      console.log(
+        `${index + 1}. ${priority} ${"  ".repeat(depth)}${url.computedUrl}`
+      );
     });
     console.log("\n");
 

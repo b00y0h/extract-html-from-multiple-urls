@@ -18,6 +18,7 @@ const COLUMNS = {
   DATE_IMPORTED: "Date Imported",
   COMPUTED_URL_FORMULA: "Destination",
   WORDPRESS_LINK: "Wordpress Link",
+  PROCESS_FIRST: "Process First",
 };
 
 // Action values
@@ -28,8 +29,8 @@ const ACTION_VALUES = {
 
 // Range constants
 const RANGES = {
-  ALL_COLUMNS: "A1:P",
-  HEADERS: "A1:P1",
+  ALL_COLUMNS: "A1:Q",
+  HEADERS: "A1:Q1",
 };
 
 async function getAuthToken() {
@@ -95,12 +96,16 @@ async function getUrlsFromSheet(auth) {
     const computedUrlFormulaColumnIndex = headers.findIndex(
       (header) => header === COLUMNS.COMPUTED_URL_FORMULA
     );
+    const processFirstColumnIndex = headers.findIndex(
+      (header) => header.trim() === COLUMNS.PROCESS_FIRST
+    );
 
     console.log("Column indexes found:", {
       [COLUMNS.ORIGINAL_LINK]: originalLinkColumnIndex,
       [COLUMNS.ACTION]: actionColumnIndex,
       [COLUMNS.DATE_IMPORTED]: dateImportedColumnIndex,
       [COLUMNS.COMPUTED_URL_FORMULA]: computedUrlFormulaColumnIndex,
+      [COLUMNS.PROCESS_FIRST]: processFirstColumnIndex,
     });
 
     if (
@@ -130,10 +135,24 @@ async function getUrlsFromSheet(auth) {
     const urlsWithRows = filteredRows.map((row, index) => ({
       originalUrl: row[originalLinkColumnIndex],
       computedUrl: row[computedUrlFormulaColumnIndex],
-      rowNumber: rows.indexOf(row), // This gets the actual row number in the sheet
+      rowNumber: rows.indexOf(row),
+      processFirst:
+        processFirstColumnIndex !== -1
+          ? row[processFirstColumnIndex]?.toString().toLowerCase() === "yes" ||
+            row[processFirstColumnIndex]?.toString().toLowerCase() === "true"
+          : false,
     }));
 
-    console.log(`Number of URLs returned: ${urlsWithRows.length}`);
+    // Sort the URLs so that Process First items come first
+    urlsWithRows.sort((a, b) => {
+      if (a.processFirst === b.processFirst) return 0;
+      return a.processFirst ? -1 : 1;
+    });
+
+    const priorityCount = urlsWithRows.filter((url) => url.processFirst).length;
+    console.log(`Found ${priorityCount} priority URLs to process first`);
+    console.log(`Total number of URLs to process: ${urlsWithRows.length}`);
+
     return urlsWithRows;
   } catch (err) {
     console.error("Error accessing sheet:", err);

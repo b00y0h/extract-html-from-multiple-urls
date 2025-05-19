@@ -82,14 +82,26 @@ function sortUrlsByHierarchy(urls) {
         new RegExp(`^(?:https?:\/\/)?(?:www\.)?${domain}\/`),
         ""
       );
-      return (path.match(/\//g) || []).length;
+      const segments = path.split("/").filter(Boolean);
+      // Return -1 for empty paths to ensure they're processed first
+      return segments.length === 0 ? -1 : segments.length;
     };
-    return getDepth(a.computedUrl) - getDepth(b.computedUrl);
+
+    const depthA = getDepth(a.computedUrl);
+    const depthB = getDepth(b.computedUrl);
+
+    // Sort by depth first
+    if (depthA !== depthB) {
+      return depthA - depthB;
+    }
+
+    // For same depth, sort alphabetically to ensure consistent order
+    return a.computedUrl.localeCompare(b.computedUrl);
   });
 
   console.log("\n📋 Planned Processing Order:");
   sortedUrls.forEach((url, index) => {
-    const depth = url.computedUrl.split("/").filter(Boolean).length - 1;
+    const depth = url.computedUrl.split("/").filter(Boolean).length;
     console.log(`  ${index + 1}. [Depth: ${depth}] ${url.computedUrl}`);
   });
 
@@ -108,19 +120,44 @@ async function verifyParentHierarchy(url) {
   console.log(`📚 Path segments:`, pathSegments);
   console.log(`📏 Segment count: ${pathSegments.length}`);
 
-  // If this is a root page or empty path, no verification needed
+  // If this is a root page or empty path, always return true
   if (pathSegments.length <= 1 || !pathSegments[0]) {
-    console.log(`🌱 Root-level page, no parent check needed`);
+    console.log(
+      `🌱 Root-level page (${
+        pathSegments[0] || "root"
+      }), proceeding without parent check`
+    );
     console.log(`🔍 HIERARCHY CHECK END ---------------------\n`);
     return true;
   }
 
-  // Check the immediate parent
+  // For non-root pages, check parent hierarchy
   const parentPath = pathSegments.slice(0, -1).join("/");
   console.log(`👆 Checking immediate parent: ${parentPath}`);
 
   const parentId = await findPageBySlug(parentPath);
   if (!parentId) {
+    // If parent is missing but is a root-level page, create it with dummy content
+    if (pathSegments.length === 2) {
+      console.log(`📝 Creating root-level parent page: ${parentPath}`);
+      try {
+        const parentTitle = parentPath.split("/").pop().replace(/-/g, " ");
+        const dummyContent = `<!-- wp:paragraph --><p>Content for ${parentTitle}</p><!-- /wp:paragraph -->`;
+        const { postToWordPress } = require("../postToWordpress");
+        const newParentId = await postToWordPress({
+          title: parentTitle.charAt(0).toUpperCase() + parentTitle.slice(1),
+          content: dummyContent,
+          status: "publish",
+          slug: parentPath,
+        });
+        if (newParentId) {
+          console.log(`✅ Created parent page with ID: ${newParentId}`);
+          return true;
+        }
+      } catch (error) {
+        console.error(`❌ Failed to create parent page: ${error.message}`);
+      }
+    }
     console.log(`❌ Parent not found: ${parentPath}`);
     console.log(`🔍 HIERARCHY CHECK END ---------------------\n`);
     return false;
