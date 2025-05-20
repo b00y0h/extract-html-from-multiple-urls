@@ -131,6 +131,17 @@ async function postToWordPress(post) {
       successfulMedia: providedSuccessfulMedia,
     } = post;
 
+    // First check if a page with this slug already exists
+    console.log(`🔍 Checking if page with slug "${slug}" already exists...`);
+    const existingPageId = await findPageBySlug(slug);
+    if (existingPageId) {
+      console.log(
+        `⚠️ Page with slug "${slug}" already exists (ID: ${existingPageId})`
+      );
+      return existingPageId;
+    }
+    console.log(`✅ Slug "${slug}" is available for new page`);
+
     let formattedContent = content;
     let featuredMediaId = providedFeaturedMediaId || null;
     let successfulMedia = providedSuccessfulMedia || [];
@@ -323,10 +334,11 @@ async function findPageBySlug(slug) {
     const apiUrl = `${config.wordpress.apiBaseUrl}/wp-json/wp/v2/pages`;
     console.log(`🔗 Using API URL: ${apiUrl}`);
 
+    // Search for all pages with this slug - we might have multiple matches
     const response = await axios.get(apiUrl, {
       params: {
         slug: searchSlug,
-        per_page: 1,
+        per_page: 100, // Get all possible matches
       },
       headers: {
         "User-Agent": config.wordpress.userAgent,
@@ -335,55 +347,52 @@ async function findPageBySlug(slug) {
         username: wpConfig.username,
         password: wpConfig.password,
       },
-      maxRedirects: 5,
-      validateStatus: function (status) {
-        return status >= 200 && status < 400;
-      },
     });
 
     if (response.data && response.data.length > 0) {
-      const foundPage = response.data[0];
-      console.log(`✅ Found page ID: ${foundPage.id} for: ${searchSlug}`);
-      console.log(`👆 Page's parent ID: ${foundPage.parent || "none"}`);
-
-      if (pathSegments.length > 1) {
-        const parentSlug = pathSegments[pathSegments.length - 2];
-        console.log(`👀 Looking for parent: ${parentSlug}`);
-
-        if (foundPage.parent) {
-          // Apply rate limiting before fetching parent
-          await sleep(config.wordpress.rateLimitMs);
-
-          const parentResponse = await axios.get(
-            `${wpConfig.endpoint}/wp/v2/pages/${foundPage.parent}`,
-            {
-              headers: {
-                "User-Agent": config.wordpress.userAgent,
-              },
-              auth: {
-                username: wpConfig.username,
-                password: wpConfig.password,
-              },
-            }
+      // For root-level pages (no parent path), find one with no parent
+      if (pathSegments.length === 1) {
+        const rootPage = response.data.find((page) => page.parent === 0);
+        if (rootPage) {
+          console.log(
+            `✅ Found root-level page ID: ${rootPage.id} for: ${searchSlug}`
           );
-
-          console.log(`📌 Found parent slug: ${parentResponse.data.slug}`);
-          console.log(`🎯 Expected parent: ${parentSlug}`);
-
-          if (parentResponse.data.slug === parentSlug) {
-            console.log(`✅ Parent match confirmed!`);
-            return foundPage.id;
-          } else {
-            console.log(`❌ Parent mismatch`);
-          }
-        } else {
-          console.log(`⚠️ Page has no parent`);
+          return rootPage.id;
         }
-      } else {
-        return foundPage.id;
+      }
+      // For nested pages, verify the full path matches
+      else {
+        for (const page of response.data) {
+          // Get the full path of this page by traversing up the parent chain
+          const pagePathSegments = [searchSlug];
+          let currentPage = page;
+
+          while (currentPage.parent !== 0) {
+            await sleep(config.wordpress.rateLimitMs); // Rate limiting for parent lookup
+            const parentResponse = await axios.get(
+              `${apiUrl}/${currentPage.parent}`,
+              {
+                headers: { "User-Agent": config.wordpress.userAgent },
+                auth: {
+                  username: wpConfig.username,
+                  password: wpConfig.password,
+                },
+              }
+            );
+            currentPage = parentResponse.data;
+            pagePathSegments.unshift(currentPage.slug);
+          }
+
+          const pagePath = pagePathSegments.join("/");
+          if (pagePath === slug) {
+            console.log(`✅ Found exact path match with ID: ${page.id}`);
+            return page.id;
+          }
+        }
       }
     }
-    console.log(`❌ No page found for: ${searchSlug}`);
+
+    console.log(`❌ No matching page found for: ${searchSlug}`);
     console.log(`🔍 SEARCH END -------------------------------\n`);
     return null;
   } catch (error) {

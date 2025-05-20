@@ -56,3 +56,23 @@ Form Fields:
   - email: cm-thlihkl-thlihkl
 ==================
 
+[2025-05-19T23:37:55.665Z] 
+=== FORM FOUND ===
+Page URL: https://www.vancouver.wsu.edu
+Form Action: http://washingtonstateuniversityvancouver.createsend.com/t/r/s/thlihkl/
+Form Method: post
+Form ID: 
+Form Fields:
+  - email: cm-thlihkl-thlihkl
+==================
+
+[2025-05-20T00:47:35.043Z] 
+=== FORM FOUND ===
+Page URL: https://www.vancouver.wsu.edu
+Form Action: http://washingtonstateuniversityvancouver.createsend.com/t/r/s/thlihkl/
+Form Method: post
+Form ID: 
+Form Fields:
+  - email: cm-thlihkl-thlihkl
+==================
+

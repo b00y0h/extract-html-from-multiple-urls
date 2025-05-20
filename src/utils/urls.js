@@ -120,29 +120,50 @@ async function verifyParentHierarchy(url) {
   console.log(`📚 Path segments:`, pathSegments);
   console.log(`📏 Segment count: ${pathSegments.length}`);
 
-  // If this is a root page or empty path, always return true
-  if (pathSegments.length <= 1 || !pathSegments[0]) {
-    console.log(
-      `🌱 Root-level page (${
-        pathSegments[0] || "root"
-      }), proceeding without parent check`
-    );
-    console.log(`🔍 HIERARCHY CHECK END ---------------------\n`);
+  // For an empty path or root URL, verify it doesn't already exist
+  if (pathSegments.length === 0) {
+    console.log(`🌱 Home page request, checking if it exists...`);
+    const homePageId = await findPageBySlug("");
+    if (homePageId) {
+      console.log(`⚠️ Home page already exists with ID: ${homePageId}`);
+      return false;
+    }
     return true;
   }
 
-  // For non-root pages, check parent hierarchy
-  const parentPath = pathSegments.slice(0, -1).join("/");
-  console.log(`👆 Checking immediate parent: ${parentPath}`);
+  // For root-level pages, check if they already exist
+  if (pathSegments.length === 1) {
+    console.log(`🌱 Root-level page check: ${pathSegments[0]}`);
+    const pageId = await findPageBySlug(pathSegments[0]);
+    if (pageId) {
+      console.log(`⚠️ Page already exists with ID: ${pageId}`);
+      return false;
+    }
+    console.log(`✅ Root-level page can be created`);
+    return true;
+  }
 
+  // For nested pages, check the entire hierarchy
+  console.log(`👆 Checking full hierarchy for: ${pathSegments.join("/")}`);
+
+  // Check if this exact page already exists
+  const existingPageId = await findPageBySlug(pathSegments.join("/"));
+  if (existingPageId) {
+    console.log(`⚠️ Page already exists with ID: ${existingPageId}`);
+    return false;
+  }
+
+  // Check if parent exists
+  const parentPath = pathSegments.slice(0, -1).join("/");
   const parentId = await findPageBySlug(parentPath);
+
   if (!parentId) {
-    // If parent is missing but is a root-level page, create it with dummy content
     if (pathSegments.length === 2) {
-      console.log(`📝 Creating root-level parent page: ${parentPath}`);
+      // Only auto-create parent if it's a root-level parent
+      console.log(`📝 Need to create root-level parent: ${parentPath}`);
       try {
-        const parentTitle = parentPath.split("/").pop().replace(/-/g, " ");
-        const dummyContent = `<!-- wp:paragraph --><p>Content for ${parentTitle}</p><!-- /wp:paragraph -->`;
+        const parentTitle = pathSegments[0].replace(/-/g, " ");
+        const dummyContent = `<!-- wp:paragraph --><p>Parent page for ${parentTitle}</p><!-- /wp:paragraph -->`;
         const { postToWordPress } = require("../postToWordpress");
         const newParentId = await postToWordPress({
           title: parentTitle.charAt(0).toUpperCase() + parentTitle.slice(1),
@@ -151,11 +172,14 @@ async function verifyParentHierarchy(url) {
           slug: parentPath,
         });
         if (newParentId) {
-          console.log(`✅ Created parent page with ID: ${newParentId}`);
+          console.log(
+            `✅ Created root-level parent page with ID: ${newParentId}`
+          );
           return true;
         }
       } catch (error) {
         console.error(`❌ Failed to create parent page: ${error.message}`);
+        return false;
       }
     }
     console.log(`❌ Parent not found: ${parentPath}`);
