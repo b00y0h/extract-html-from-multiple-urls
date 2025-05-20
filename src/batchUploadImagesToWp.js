@@ -73,9 +73,6 @@ async function batchUploadImagesToWP(images, wpConfig) {
       await sleep(config.wordpress.rateLimitMs);
 
       console.log(`🚀 Uploading to WordPress: ${fileName}`);
-      console.log(`📍 API Endpoint: ${wpConfig.endpoint}/wp/v2/media`);
-      console.log(`DEBUG: Content-Type: ${contentType}`);
-      console.log(`DEBUG: Buffer size: ${buffer.length} bytes`);
 
       try {
         // Upload to WordPress
@@ -98,14 +95,6 @@ async function batchUploadImagesToWP(images, wpConfig) {
           }
         );
 
-        console.log(
-          `DEBUG: Upload successful, response status: ${uploadResponse.status}`
-        );
-        console.log(`DEBUG: WordPress media ID: ${uploadResponse.data.id}`);
-        console.log(
-          `DEBUG: WordPress media URL: ${uploadResponse.data.source_url}`
-        );
-
         results.push({
           originalUrl: image.url,
           wordpressUrl: uploadResponse.data.source_url,
@@ -126,16 +115,14 @@ async function batchUploadImagesToWP(images, wpConfig) {
         throw uploadError;
       }
     } catch (error) {
-      console.error(`Error processing image ${image.url}:`, error.message);
-      if (error.response) {
-        console.error(`Response status: ${error.response.status}`);
-        console.error(`Response data:`, error.response.data);
-      }
+      // console.error(`Error processing image ${image.url}:`, error.message);
+      // if (error.response) {
+      //   console.error(`Response status: ${error.response.status}`);
+      //   console.error(`Response data:`, error.response.data);
+      // }
       logMessage(`Error processing image ${image.url}: ${error.message}`);
     }
   }
-
-  console.log("🚀 ~ batchUploadImagesToWP ~ results:", results);
   return results;
 }
 

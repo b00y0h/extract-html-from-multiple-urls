@@ -6,6 +6,14 @@ const config = require("./config");
 const { batchUploadImagesToWP } = require("./batchUploadImagesToWp");
 const path = require("path");
 const { logMessage } = require("./utils/logs");
+const WPAPI = require("wpapi");
+
+// Initialize the WordPress API client
+const wp = new WPAPI({
+  endpoint: config.wordpress.apiBaseUrl,
+  username: config.wordpress.username,
+  password: config.wordpress.password,
+});
 
 // Helper function for rate limiting
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -18,11 +26,6 @@ const wpConfig = {
 
 // Process an individual image
 async function processImage(image) {
-  console.log(`DEBUG: Image directory path: ${config.paths.imagesDir}`);
-  console.log(
-    `DEBUG: Directory exists: ${fs.existsSync(config.paths.imagesDir)}`
-  );
-
   if (!image?.url) {
     throw new Error("Image URL is undefined or null");
   }
@@ -33,18 +36,15 @@ async function processImage(image) {
     // Save the original URL and ensure it's properly encoded for axios
     const originalUrl = image.url;
     const encodedUrl = encodeURI(decodeURIComponent(originalUrl));
-    console.log(`🔄 Encoded URL: ${encodedUrl}`);
+    // console.log(`🔄 Encoded URL: ${encodedUrl}`);
 
     // Generate filename from original URL to preserve the original name
     const fileName = decodeURIComponent(originalUrl).split("/").pop();
     const localPath = path.join(config.paths.imagesDir, fileName);
-    console.log(`DEBUG: Local path for image: ${localPath}`);
+    // console.log(`DEBUG: Local path for image: ${localPath}`);
 
     // Ensure the images directory exists - IMPORTANT FIX
     if (!fs.existsSync(config.paths.imagesDir)) {
-      console.log(
-        `DEBUG: Creating images directory: ${config.paths.imagesDir}`
-      );
       try {
         fs.mkdirSync(config.paths.imagesDir, { recursive: true, mode: 0o755 });
         console.log(`DEBUG: Successfully created images directory`);
@@ -57,8 +57,8 @@ async function processImage(image) {
     // If image doesn't exist locally, download it
     if (!fs.existsSync(localPath)) {
       console.log(`📥 Downloading image from ${encodedUrl}`);
-      console.log(`DEBUG: Attempting to download image from: ${encodedUrl}`);
-      console.log(`DEBUG: Saving to local path: ${localPath}`);
+      // console.log(`DEBUG: Attempting to download image from: ${encodedUrl}`);
+      // console.log(`DEBUG: Saving to local path: ${localPath}`);
 
       try {
         const response = await axios.get(encodedUrl, {
@@ -99,7 +99,6 @@ async function processImage(image) {
     console.log(`DEBUG: Updated image URL to ${image.url}`);
 
     const results = await batchUploadImagesToWP([image], wpConfig);
-    console.log(`DEBUG: batchUploadImagesToWP results:`, results);
 
     if (results && results.length > 0) {
       return {
@@ -119,150 +118,70 @@ async function processImage(image) {
 }
 
 // Process the content of a URL and save it to a file
-async function postToWordPress(post) {
-  try {
-    const {
-      title,
-      content,
-      status,
-      slug,
-      images: providedImages,
-      featuredMediaId: providedFeaturedMediaId,
-      successfulMedia: providedSuccessfulMedia,
-    } = post;
+async function postToWordPress(url, content, title) {
+  console.log("\n[POST TO WORDPRESS] ---------------------");
+  console.log(`Processing URL: ${url}`);
+  console.log(`Title: ${title}`);
 
-    // First check if a page with this slug already exists
-    console.log(`🔍 Checking if page with slug "${slug}" already exists...`);
+  try {
+    // Handle if url is an object with originalUrl property
+    const urlStr = typeof url === "object" ? url.originalUrl || url.url : url;
+    if (!urlStr || typeof urlStr !== "string") {
+      throw new Error(`Invalid URL provided: ${JSON.stringify(url)}`);
+    }
+
+    // Get the slug from the URL
+    const pathSegments = urlStr.split("/").filter(Boolean);
+    const slug = pathSegments[pathSegments.length - 1] || "home";
+    console.log(`Using slug: ${slug}`);
+
+    // First check if page already exists
     const existingPageId = await findPageBySlug(slug);
     if (existingPageId) {
       console.log(
-        `⚠️ Page with slug "${slug}" already exists (ID: ${existingPageId})`
+        `Page already exists with ID ${existingPageId}, skipping creation`
       );
       return existingPageId;
     }
-    console.log(`✅ Slug "${slug}" is available for new page`);
 
-    let formattedContent = content;
-    let featuredMediaId = providedFeaturedMediaId || null;
-    let successfulMedia = providedSuccessfulMedia || [];
-
-    // Clean up any malformed block tags
-    formattedContent = formattedContent.replace(/<!--\s*wp:/g, "<!-- wp:");
-    formattedContent = formattedContent.replace(/\s*\/-->/g, " -->");
-
-    // Split the slug into path segments
-    const pathSegments = slug.split("/").filter(Boolean);
-
-    // If this is not a root page, ensure parent exists
-    let parentId = null;
-    if (pathSegments.length > 1) {
-      const parentSlug = pathSegments[pathSegments.length - 2];
-      const parentPath = pathSegments.slice(0, -1).join("/");
-
-      console.log(`🔍 Checking for parent page: ${parentPath}`);
-      parentId = await findPageBySlug(parentPath);
-
-      // If parent doesn't exist, create it
-      if (!parentId) {
-        console.log(`📝 Creating parent page: ${parentPath}`);
-        parentId = await postToWordPress({
-          title:
-            parentSlug.charAt(0).toUpperCase() +
-            parentSlug.slice(1).replace(/-/g, " "),
-          content: "",
-          status: "publish",
-          slug: parentPath,
-        });
-      }
-    }
-
-    const postData = {
-      title,
-      content: formattedContent,
-      status: status || "publish",
-      slug: pathSegments[pathSegments.length - 1],
-      parent: parentId || 0,
+    // Prepare the page data
+    const pageData = {
+      title:
+        title ||
+        slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " "),
+      content: content || "",
+      status: "publish",
+      slug: slug,
     };
 
-    if (featuredMediaId) {
-      postData.featured_media = featuredMediaId;
+    // Handle parent pages
+    if (pathSegments.length > 1) {
+      // This is a child page, get its parent
+      const parentSlug = pathSegments[pathSegments.length - 2];
+      console.log(`Looking for parent page with slug: ${parentSlug}`);
+
+      const parentId = await findPageBySlug(parentSlug);
+      if (!parentId) {
+        throw new Error(
+          `Parent page with slug "${parentSlug}" not found. Cannot create child page.`
+        );
+      }
+
+      pageData.parent = parentId;
+      console.log(`Setting parent ID: ${parentId}`);
+    } else {
+      console.log(`Creating root level page: ${slug}`);
     }
 
-    // Apply rate limiting before WordPress API request
-    await sleep(config.wordpress.rateLimitMs);
+    // Create the page
+    console.log(`Creating new page with slug: ${slug}`);
+    const newPage = await wp.pages().create(pageData);
+    console.log(`Successfully created page with ID: ${newPage.id}`);
 
-    // Create the WordPress post
-    const apiUrl = `${wpConfig.endpoint}/wp/v2/pages`;
-    console.log("📤 Sending request to WordPress API:", apiUrl);
-
-    const response = await axios.post(apiUrl, postData, {
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": config.wordpress.userAgent,
-      },
-      auth: {
-        username: wpConfig.username,
-        password: wpConfig.password,
-      },
-      maxRedirects: 5,
-      timeout: 30000, // 30 second timeout
-    });
-
-    if (!response.data || !response.data.id) {
-      throw new Error("WordPress API response did not include a post ID");
-    }
-
-    // Update post_parent for all media attachments
-    if (successfulMedia.length > 0) {
-      await Promise.all(
-        successfulMedia.map(async (media) => {
-          try {
-            await sleep(config.wordpress.rateLimitMs);
-            await axios.post(
-              `${wpConfig.endpoint}/wp/v2/media/${media.id}`,
-              { post: response.data.id },
-              {
-                headers: {
-                  "Content-Type": "application/json",
-                  "User-Agent": config.wordpress.userAgent,
-                },
-                auth: {
-                  username: wpConfig.username,
-                  password: wpConfig.password,
-                },
-              }
-            );
-            console.log(`✅ Updated post_parent for media ID: ${media.id}`);
-          } catch (error) {
-            console.error(
-              `Error updating media attachment ${media.id}: ${error.message}`
-            );
-          }
-        })
-      );
-    }
-
-    console.log(`✅ Successfully created page with ID: ${response.data.id}`);
-    logMessage(
-      `Successfully created page with ID: ${response.data.id}`,
-      config.paths.apiLogFile
-    );
-    return response.data.id;
+    return newPage.id;
   } catch (error) {
-    console.error(`❌ Error creating WordPress page: ${error.message}`);
-    console.error(`Stack trace: ${error.stack}`);
-    if (error.response) {
-      console.error("Response status:", error.response.status);
-      console.error(
-        "Response data:",
-        JSON.stringify(error.response.data, null, 2)
-      );
-    }
-    logMessage(
-      `Error creating WordPress page: ${error.message}`,
-      config.paths.apiLogFile
-    );
-    return null;
+    console.error(`Error posting to WordPress: ${error.message}`);
+    throw error;
   }
 }
 
@@ -305,95 +224,27 @@ async function updateParentPage(pageId, parentPageId) {
 
 // Function to find a WordPress page by slug
 async function findPageBySlug(slug) {
-  console.log("🔍 Input slug:", slug);
+  console.log("\n[FIND PAGE] ---------------------");
+  console.log(`Searching for page with slug: ${slug}`);
+
   try {
-    // Apply rate limiting
-    await sleep(config.wordpress.rateLimitMs);
+    // Normalize the slug to ensure consistent matching
+    const normalizedSlug = slug.toLowerCase().trim();
 
-    // Only clean the slug if it looks like a URL
-    if (slug.includes("://") || slug.startsWith("//")) {
-      slug = slug.replace(/^(?:https?:\/\/)?(?:[^\/]+)/, ""); // Remove domain part only if it's a URL
-    }
-    slug = slug.replace(/^\/+|\/+$/g, ""); // Remove leading/trailing slashes
-    console.log("🔍 Cleaned slug:", slug);
+    // Search specifically for the page with this slug
+    const matchingPages = await wp.pages().param("slug", normalizedSlug);
 
-    if (!slug) {
-      console.log("🌱 Empty slug detected, skipping slug check.");
-      return null;
+    if (matchingPages && matchingPages.length > 0) {
+      const existingPage = matchingPages[0];
+      console.log(`Found existing page with ID: ${existingPage.id}`);
+      return existingPage.id;
     }
 
-    const pathSegments = slug.split("/").filter(Boolean);
-    const searchSlug = pathSegments[pathSegments.length - 1];
-
-    console.log(`\n🔍 SEARCH START -----------------------------`);
-    console.log(`📂 Full path: ${slug}`);
-    console.log(`🎯 Searching for: ${searchSlug}`);
-    console.log(`📚 Path segments:`, pathSegments);
-
-    // Construct the full API URL properly
-    const apiUrl = `${config.wordpress.apiBaseUrl}/wp-json/wp/v2/pages`;
-    console.log(`🔗 Using API URL: ${apiUrl}`);
-
-    // Search for all pages with this slug - we might have multiple matches
-    const response = await axios.get(apiUrl, {
-      params: {
-        slug: searchSlug,
-        per_page: 100, // Get all possible matches
-      },
-      headers: {
-        "User-Agent": config.wordpress.userAgent,
-      },
-      auth: {
-        username: wpConfig.username,
-        password: wpConfig.password,
-      },
-    });
-
-    if (response.data && response.data.length > 0) {
-      // Check if any page exists with this slug
-      if (pathSegments.length === 1) {
-        // For root pages, return the first one found with this slug
-        console.log(`✅ Found existing page with slug "${searchSlug}", ID: ${response.data[0].id}`);
-        return response.data[0].id;
-      }
-      // For nested pages, verify the full path matches
-      else {
-        for (const page of response.data) {
-          // Get the full path of this page by traversing up the parent chain
-          const pagePathSegments = [searchSlug];
-          let currentPage = page;
-
-          while (currentPage.parent !== 0) {
-            await sleep(config.wordpress.rateLimitMs); // Rate limiting for parent lookup
-            const parentResponse = await axios.get(
-              `${apiUrl}/${currentPage.parent}`,
-              {
-                headers: { "User-Agent": config.wordpress.userAgent },
-                auth: {
-                  username: wpConfig.username,
-                  password: wpConfig.password,
-                },
-              }
-            );
-            currentPage = parentResponse.data;
-            pagePathSegments.unshift(currentPage.slug);
-          }
-
-          const pagePath = pagePathSegments.join("/");
-          if (pagePath === slug) {
-            console.log(`✅ Found exact path match with ID: ${page.id}`);
-            return page.id;
-          }
-        }
-      }
-    }
-
-    console.log(`❌ No matching page found for: ${searchSlug}`);
-    console.log(`🔍 SEARCH END -------------------------------\n`);
+    console.log(`No existing page found with slug: ${slug}`);
     return null;
   } catch (error) {
-    console.error(`💥 Error finding page ${slug}:`, error.message);
-    return null;
+    console.error(`Error finding page by slug: ${error.message}`);
+    throw error;
   }
 }
 

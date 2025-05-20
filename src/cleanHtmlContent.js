@@ -45,9 +45,6 @@ async function transformToWPBlocks(
       throw new Error(`Invalid root URL derived from: ${originalUrl}`);
     }
 
-    // Log media results before processing
-    console.log("DEBUG: Media results before processing:", mediaResults);
-
     // Process the content
     removeScripts($);
     handleSocialLinks($);

@@ -111,12 +111,6 @@ async function processContentImages(content, images) {
     try {
       console.log(`📸 Processing image: ${image.url}`);
 
-      // Check if images directory exists
-      console.log(`DEBUG: Image directory path: ${config.paths.imagesDir}`);
-      console.log(
-        `DEBUG: Directory exists: ${fs.existsSync(config.paths.imagesDir)}`
-      );
-
       // Ensure the images directory exists
       if (!fs.existsSync(config.paths.imagesDir)) {
         console.log(
@@ -235,7 +229,6 @@ async function processContent(
         console.log(
           `✅ Successfully processed ${successfulMedia.length} images`
         );
-        console.log("DEBUG: Successful media results:", successfulMedia);
       } catch (error) {
         console.log(
           `⚠️ Image processing failed but continuing: ${error.message}`
@@ -302,7 +295,11 @@ async function processContent(
     };
 
     console.log(`📤 Sending to WordPress...`);
-    const pageId = await postToWordPress(post);
+    const pageId = await postToWordPress(
+      computedUrl,
+      transformedToWPContent,
+      pageTitle
+    );
 
     if (pageId) {
       console.log(`✨ Successfully created WordPress page with ID: ${pageId}`);
@@ -363,8 +360,8 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
 
       // Verify parent hierarchy
       console.log(`🔍 Verifying parent hierarchy...`);
-      const hierarchyValid = await verifyParentHierarchy(computedUrl);
-      if (!hierarchyValid) {
+      const hierarchyResult = await verifyParentHierarchy(computedUrl);
+      if (hierarchyResult === null) {
         console.log(`⚠️ Skipping ${computedUrl} - parent hierarchy incomplete`);
         console.log(`🚀 PROCESSING END -------------------------\n`);
         return { url: computedUrl, pageId: null };
@@ -467,8 +464,8 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
 
     // Verify entire parent hierarchy before proceeding
     console.log(`🔍 Verifying parent hierarchy...`);
-    const hierarchyValid = await verifyParentHierarchy(computedUrl);
-    if (!hierarchyValid) {
+    const hierarchyResult = await verifyParentHierarchy(computedUrl);
+    if (hierarchyResult === null) {
       console.log(`⚠️ Skipping ${computedUrl} - parent hierarchy incomplete`);
       console.log(`🚀 PROCESSING END -------------------------\n`);
       return { url: computedUrl, pageId: null };
