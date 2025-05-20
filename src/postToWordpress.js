@@ -139,9 +139,9 @@ async function postToWordPress(url, content, title) {
     const existingPageId = await findPageBySlug(slug);
     if (existingPageId) {
       console.log(
-        `Page already exists with ID ${existingPageId}, skipping creation`
+        `Page already exists with ID ${existingPageId}, ✨ skipping creation`
       );
-      return existingPageId;
+      return { pageId: existingPageId };
     }
 
     // Prepare the page data
@@ -160,8 +160,23 @@ async function postToWordPress(url, content, title) {
       const parentSlug = pathSegments[pathSegments.length - 2];
       console.log(`Looking for parent page with slug: ${parentSlug}`);
 
-      const parentId = await findPageBySlug(parentSlug);
-      if (!parentId) {
+      let parentId = await findPageBySlug(parentSlug);
+
+      // For Create action, if parent doesn't exist, create it first
+      if (!parentId && action === "Create") {
+        console.log(
+          `Parent page "${parentSlug}" doesn't exist. Creating it...`
+        );
+        const parentResult = await postToWordPress(
+          `/pages/${parentSlug}`,
+          "", // Empty content for placeholder
+          parentSlug.charAt(0).toUpperCase() +
+            parentSlug.slice(1).replace(/-/g, " "), // Title from slug
+          "Create" // Action
+        );
+        parentId = parentResult.pageId;
+        console.log(`Created parent page with ID: ${parentId}`);
+      } else if (!parentId) {
         throw new Error(
           `Parent page with slug "${parentSlug}" not found. Cannot create child page.`
         );

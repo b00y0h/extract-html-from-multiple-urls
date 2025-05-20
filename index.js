@@ -5,13 +5,17 @@ const cheerio = require("cheerio");
 const https = require("https");
 const path = require("path");
 const config = require("./src/config");
+const { findPageBySlug } = require("./src/postToWordpress");
 const {
   postToWordPress,
   updateParentPage,
   getParentPageSlug,
   processImage,
 } = require("./src/postToWordpress");
-const { transformToWPBlocks } = require("./src/cleanHtmlContent");
+const {
+  transformToWPBlocks,
+  cleanHtmlContent,
+} = require("./src/cleanHtmlContent");
 const {
   getAuthToken,
   getUrlsFromSheet,
@@ -150,14 +154,40 @@ async function processContent(
   originalUrl,
   computedUrl,
   currentUrl,
-  totalUrls
+  totalUrls,
+  action = "Move" // Add action parameter with default value
 ) {
   console.log(`\n🔄 CONTENT PROCESSING START ---------------------`);
   console.log(`📝 Processing content for: ${computedUrl}`);
+  console.log(`🎯 Action: ${action}`);    if (!contentResponse || action === "Create") {
+      console.log(`Creating page with dummy content for action: ${action}`);
+      const pathSegments = computedUrl.split("/").filter(Boolean);
+      const slug = pathSegments[pathSegments.length - 1];
+      const title =
+        slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ");
 
-  if (!contentResponse) {
-    // ...existing code for empty content...
-  }
+      const dummyContent = `<!-- wp:paragraph -->
+<p>This is a placeholder page for ${title}. Content will be added soon.</p>
+<!-- /wp:paragraph -->`;
+
+      console.log(`📑 Generated dummy content for: ${title}`);
+
+      // Post the dummy content to WordPress
+      console.log(`📤 Sending to WordPress...`);
+      const pageId = await postToWordPress(
+        computedUrl,
+        dummyContent,
+        title
+      );
+
+      if (pageId) {
+        console.log(`✨ Successfully created WordPress page with ID: ${pageId}`);
+        return { url: computedUrl, pageId };
+      } else {
+        console.log(`❌ Failed to create WordPress page`);
+        return { url: computedUrl, pageId: null };
+      }
+    }
 
   const $ = cheerio.load(contentResponse.data);
   console.log(
@@ -339,120 +369,13 @@ async function processContent(
 // Complete fetchUrl function with hierarchy verification
 async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
   try {
-    // Apply rate limiting for content fetching
-    await sleep(config.crawler.crawlDelayMs);
-
-    // For Create actions, we won't have an originalUrl
-    if (!originalUrl) {
-      console.log(`\n🚀 PROCESSING START (Create) -------------------------`);
-      console.log(`📍 Processing URL ${currentUrl} of ${totalUrls}`);
-      console.log(`🎯 Destination URL: ${computedUrl}`);
-
-      // Get clean path segments
-      const pathSegments = computedUrl
-        .replace(/^(?:https?:\/\/)?(?:www\.)?[^/]+\//, "")
-        .split("/")
-        .filter(Boolean);
-
-      const currentSlug = pathSegments[pathSegments.length - 1];
-      console.log(`📚 Path segments:`, pathSegments);
-      console.log(`🏷️  Current slug: ${currentSlug}`);
-
-      // Verify parent hierarchy
-      console.log(`🔍 Verifying parent hierarchy...`);
-      const hierarchyResult = await verifyParentHierarchy(computedUrl);
-      if (hierarchyResult === null) {
-        console.log(`⚠️ Skipping ${computedUrl} - parent hierarchy incomplete`);
-        console.log(`🚀 PROCESSING END -------------------------\n`);
-        return { url: computedUrl, pageId: null };
-      }
-      console.log(`✅ Parent hierarchy verified`);
-
-      // Process empty content for new page
-      const result = await processContent(
-        null,
-        null,
-        computedUrl,
-        currentUrl,
-        totalUrls
-      );
-
-      if (result.pageId) {
-        console.log(`✨ Page created successfully with ID: ${result.pageId}`);
-      } else {
-        console.log(`⚠️  Page creation failed`);
-      }
-
-      console.log(`🚀 PROCESSING END -------------------------\n`);
-      return result;
-    }
-
     console.log(`\n🚀 PROCESSING START -------------------------`);
     console.log(`📍 Processing URL ${currentUrl} of ${totalUrls}`);
-    console.log(`🔗 Original URL: ${originalUrl}`);
+    console.log(`🔗 Original URL: ${typeof originalUrl === 'object' ? originalUrl.originalUrl : originalUrl}`);
     console.log(`🎯 Destination URL: ${computedUrl}`);
+    console.log(`🎯 Action: ${typeof originalUrl === 'object' ? originalUrl.action : 'Move'}`);
 
-    // Configure axios to follow redirects and track them
-    const axiosConfig = {
-      httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-      headers: {
-        "User-Agent": config.crawler.userAgent,
-      },
-      maxRedirects: 10,
-      validateStatus: function (status) {
-        return status >= 200 && status < 400;
-      },
-      maxRedirects: 5, // Limit redirects to prevent infinite loops
-    };
-
-    // Perform initial HEAD request to check for redirects
-    console.log(`🔄 Checking for redirects...`);
-    const headResponse = await axios
-      .head(originalUrl, axiosConfig)
-      .catch((e) => {
-        console.log(`⚠️ HEAD request failed:`, e.message);
-        return e.response;
-      });
-
-    const finalUrl = headResponse?.request?.res?.responseUrl || originalUrl;
-
-    if (finalUrl !== originalUrl) {
-      console.log(`⚠️ Redirect chain detected:`);
-      console.log(`⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️ Original URL: ${originalUrl}`);
-      console.log(`Final URL: ${finalUrl}`);
-
-      // Verify if the redirect is expected
-      if (!finalUrl.includes(originalUrl.replace(/\/$/, ""))) {
-        console.log(`❌ WARNING: Unexpected redirect detected!`);
-        console.log(`The page is redirecting to an unrelated URL.`);
-        throw new Error(`Unexpected redirect to ${finalUrl}`);
-      }
-    }
-
-    // Fetch content from the final URL
-    console.log(`📥 Fetching content from final URL: ${finalUrl}`);
-    const contentResponse = await axios.get(finalUrl, {
-      ...axiosConfig,
-      // Track redirects during the GET request
-      beforeRedirect: (options, { headers }) => {
-        console.log(`↪️ Redirecting to: ${options.href}`);
-      },
-    });
-
-    // Verify the final URL matches what we expect
-    const actualFinalUrl = contentResponse.request.res.responseUrl;
-    if (actualFinalUrl !== finalUrl) {
-      console.log(`❌ WARNING: GET request was redirected unexpectedly`);
-      console.log(`Expected: ${finalUrl}`);
-      console.log(`Actual: ${actualFinalUrl}`);
-      throw new Error(
-        `Unexpected redirect during GET request to ${actualFinalUrl}`
-      );
-    }
-
-    console.log(`✅ Content fetched successfully from ${actualFinalUrl}`);
-
-    // Get clean path segments, excluding the eab prefix
+    // Get clean path segments
     const pathSegments = computedUrl
       .replace(/^(?:https?:\/\/)?(?:www\.)?[^/]+\//, "")
       .split("/")
@@ -462,9 +385,12 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     console.log(`📚 Path segments:`, pathSegments);
     console.log(`🏷️  Current slug: ${currentSlug}`);
 
-    // Verify entire parent hierarchy before proceeding
+    // Verify parent hierarchy
     console.log(`🔍 Verifying parent hierarchy...`);
-    const hierarchyResult = await verifyParentHierarchy(computedUrl);
+    const hierarchyResult = await verifyParentHierarchy(
+      computedUrl,
+      originalUrl.action || "Move"
+    );
     if (hierarchyResult === null) {
       console.log(`⚠️ Skipping ${computedUrl} - parent hierarchy incomplete`);
       console.log(`🚀 PROCESSING END -------------------------\n`);
@@ -472,13 +398,68 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     }
     console.log(`✅ Parent hierarchy verified`);
 
+    // Check if the page already exists before attempting content fetch
+    const existingPage = await findPageBySlug(currentSlug);
+    if (existingPage) {
+      console.log(
+        `✨ Page already exists with ID ${existingPage}, skipping content processing`
+      );
+      return { url: computedUrl, pageId: existingPage };
+    }
+
+    // For Create action, skip content fetching
+    const action = typeof originalUrl === 'object' ? originalUrl.action : 'Move';
+    if (action === "Create") {
+      console.log("🔄 Create action - processing with dummy content");
+      const result = await processContent(
+        null,
+        originalUrl,
+        computedUrl,
+        currentUrl,
+        totalUrls,
+        "Create"
+      );
+      return result;
+    }
+
+    // For Move actions, fetch and process content
+    console.log(`🔄 Checking for redirects...`);
+    await sleep(config.crawler.crawlDelayMs);
+
+    // Configure axios for content fetching
+    const axiosConfig = {
+      httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+      headers: {
+        "User-Agent": config.crawler.userAgent,
+      },
+      maxRedirects: 10,
+      validateStatus: function (status) {
+        return status >= 200 && status < 400;
+      },
+    };
+
+    // Get the URL to fetch from
+    const urlToFetch =
+      originalUrl.originalUrl ||
+      (typeof originalUrl === "string" ? originalUrl : null);
+    if (!urlToFetch) {
+      throw new Error("No valid URL to fetch content from");
+    }
+
+    console.log(
+      `📥 Fetching content from URL: ${originalUrl.originalUrl || originalUrl}`
+    );
+    const contentResponse = await axios.get(urlToFetch, axiosConfig);
+    console.log(`✅ Content fetched successfully`);
+
     // Process the fetched content
     const result = await processContent(
       contentResponse,
-      originalUrl,
+      originalUrl.originalUrl || originalUrl,
       computedUrl,
       currentUrl,
-      totalUrls
+      totalUrls,
+      originalUrl.action || "Move"
     );
 
     if (result.pageId) {
@@ -490,8 +471,9 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     console.log(`🚀 PROCESSING END -------------------------\n`);
     return result;
   } catch (error) {
-    // Log errors and append to the error file
-    const errorMessage = `Error processing URL ${originalUrl}: ${error.message}`;
+    const errorMessage = `Error processing URL ${
+      originalUrl.originalUrl || originalUrl
+    }: ${error.message}`;
     logMessage(`${errorMessage}\n`, ERROR_URL_FILE);
     console.error(`💥 ${errorMessage}`);
 

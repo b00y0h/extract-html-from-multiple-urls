@@ -121,27 +121,49 @@ async function getUrlsFromSheet(auth) {
       const action = row[actionColumnIndex]?.trim();
       const url = row[computedUrlFormulaColumnIndex];
       const dateImported = row[dateImportedColumnIndex];
+      const originalUrl = row[originalLinkColumnIndex];
 
+      // Skip rows with empty original URLs only for Move actions
+      if (action === ACTION_VALUES.MOVE && !originalUrl) {
+        console.log(
+          `Skipping row ${
+            index + 2
+          } due to missing Source URL (required for Move action)`
+        );
+        return false;
+      }
+
+      // For Move actions we need both a URL and no dateImported
       if (action === ACTION_VALUES.MOVE) {
         return url && !dateImported;
-      } else if (action === ACTION_VALUES.CREATE) {
-        return !dateImported;
+      }
+      // For Create actions we only need no dateImported
+      else if (action === ACTION_VALUES.CREATE) {
+        return url && !dateImported;
       }
       return false;
     });
 
     console.log(`Total filtered rows: ${filteredRows.length}`);
 
-    const urlsWithRows = filteredRows.map((row, index) => ({
-      originalUrl: row[originalLinkColumnIndex],
-      computedUrl: row[computedUrlFormulaColumnIndex],
-      rowNumber: rows.indexOf(row),
-      processFirst:
-        processFirstColumnIndex !== -1
-          ? row[processFirstColumnIndex]?.toString().toLowerCase() === "yes" ||
-            row[processFirstColumnIndex]?.toString().toLowerCase() === "true"
-          : false,
-    }));
+    const urlsWithRows = filteredRows.map((row, index) => {
+      const action = row[actionColumnIndex]?.trim();
+      return {
+        originalUrl: {
+          originalUrl: row[originalLinkColumnIndex],
+          action: action || ACTION_VALUES.MOVE, // Ensure action is always set
+        },
+        computedUrl: row[computedUrlFormulaColumnIndex],
+        rowNumber: rows.indexOf(row),
+        action: action || ACTION_VALUES.MOVE, // Ensure action is always set
+        processFirst:
+          processFirstColumnIndex !== -1
+            ? row[processFirstColumnIndex]?.toString().toLowerCase() ===
+                "yes" ||
+              row[processFirstColumnIndex]?.toString().toLowerCase() === "true"
+            : false,
+      };
+    });
 
     // Sort the URLs so that Process First items come first
     urlsWithRows.sort((a, b) => {

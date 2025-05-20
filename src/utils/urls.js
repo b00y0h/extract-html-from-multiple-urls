@@ -16,6 +16,10 @@ function getRootUrl(url) {
 }
 
 function ensureUrlProtocol(url) {
+  if (!url || typeof url !== "string" || url.trim() === "") {
+    throw new Error("Empty or invalid URL provided");
+  }
+
   if (!/^https?:\/\//i.test(url)) {
     return `https://${url}`;
   }
@@ -135,7 +139,7 @@ const wp = new WPAPI({
 });
 
 // Add this function to verify parent exists before processing
-async function verifyParentHierarchy(url) {
+async function verifyParentHierarchy(url, action = "Move") {
   const pathSegments = url
     .replace(/^(?:https?:\/\/)?(?:www\.)?[^/]+\//, "") // Remove domain part
     .split("/")
@@ -145,6 +149,7 @@ async function verifyParentHierarchy(url) {
   console.log(`Checking hierarchy for: ${url}`);
   console.log(`Path segments:`, pathSegments);
   console.log(`Segment count: ${pathSegments.length}`);
+  console.log(`Action: ${action}`);
 
   // For an empty path or root URL, verify it doesn't already exist
   if (pathSegments.length === 0) {
@@ -169,12 +174,20 @@ async function verifyParentHierarchy(url) {
     return 0; // Return 0 to indicate this is a valid root page
   }
 
-  // For child pages, verify the parent exists
+  // For child pages, verify the parent exists or can be created
   const parentSlug = pathSegments[pathSegments.length - 2];
   console.log(`Checking for parent page with slug: ${parentSlug}`);
 
   const parentPage = await findPageBySlug(parentSlug);
   if (!parentPage) {
+    // If we're creating pages and the parent doesn't exist, that's okay
+    if (action === "Create") {
+      console.log(
+        `Parent page "${parentSlug}" doesn't exist but will be created since action is Create`
+      );
+      return 0;
+    }
+    // For Move action, we need the parent to exist
     throw new Error(
       `Parent page with slug "${parentSlug}" not found. Cannot create child page.`
     );
