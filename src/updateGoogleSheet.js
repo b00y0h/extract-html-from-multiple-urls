@@ -1,5 +1,6 @@
 const { google } = require("googleapis");
 const path = require("path");
+const config = require("./config");
 
 // Configuration constants
 const KEYFILEPATH = path.join(process.cwd(), "service-account-key.json");
@@ -230,7 +231,7 @@ async function updateSheetWithTimestamp(auth, rowIndex, pageId) {
       })
       .replace(",", "");
 
-    const wordpressLink = `https://wsuwp.vancouver.wsu.edu/eab/wp-admin/post.php?post=${pageId}&action=edit`;
+    const wordpressLink = `${config.wordpress.apiBaseUrl}/wp-admin/post.php?post=${pageId}&action=edit`;
 
     const request = {
       spreadsheetId: SHEET_ID,
