@@ -1,10 +1,6 @@
 const path = require("path");
 
 function handleImages($, rootUrl, mediaResults = []) {
-  console.log(
-    "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀 ~ handleImages ~ mediaResults:",
-    mediaResults
-  );
   $("img").each((i, el) => {
     let src = $(el).attr("src");
     const alt = $(el).attr("alt") || "";
@@ -40,11 +36,6 @@ function handleImages($, rootUrl, mediaResults = []) {
       });
 
       if (mediaItem?.wordpressUrl && mediaItem?.id) {
-        console.log(
-          `DEBUG: Found matching media item for ${basename}:`,
-          mediaItem
-        );
-
         // Start building the image block
         let blockAttributes = {
           id: mediaItem.id,

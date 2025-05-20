@@ -76,34 +76,63 @@ function sortUrlsByHierarchy(urls) {
       ? config.urls.production
       : config.urls.staging;
 
-  const sortedUrls = urls.sort((a, b) => {
-    const getDepth = (url) => {
-      const path = url.replace(
-        new RegExp(`^(?:https?:\/\/)?(?:www\.)?${domain}\/`),
-        ""
-      );
-      const segments = path.split("/").filter(Boolean);
-      // Return -1 for empty paths to ensure they're processed first
-      return segments.length === 0 ? -1 : segments.length;
+  // Helper function to get path segments and depth
+  const getPathInfo = (url) => {
+    const path = url.replace(
+      new RegExp(`^(?:https?:\/\/)?(?:www\.)?${domain}\/`),
+      ""
+    );
+    const segments = path.split("/").filter(Boolean);
+    return {
+      segments,
+      depth: segments.length,
+      isRoot: segments.length <= 1,
     };
+  };
 
-    const depthA = getDepth(a.computedUrl);
-    const depthB = getDepth(b.computedUrl);
+  // First, separate root and child pages
+  const rootPages = [];
+  const childPages = [];
 
-    // Sort by depth first
-    if (depthA !== depthB) {
-      return depthA - depthB;
+  urls.forEach((url) => {
+    const pathInfo = getPathInfo(url.computedUrl);
+    if (pathInfo.isRoot) {
+      rootPages.push({ ...url, depth: pathInfo.depth });
+    } else {
+      childPages.push({ ...url, depth: pathInfo.depth });
     }
+  });
 
-    // For same depth, sort alphabetically to ensure consistent order
+  // Sort root pages alphabetically
+  rootPages.sort((a, b) => a.computedUrl.localeCompare(b.computedUrl));
+
+  // Sort child pages by depth and then alphabetically
+  childPages.sort((a, b) => {
+    if (a.depth !== b.depth) {
+      return a.depth - b.depth;
+    }
     return a.computedUrl.localeCompare(b.computedUrl);
   });
 
+  // Combine root pages first, then child pages
+  const sortedUrls = [...rootPages, ...childPages];
+
   console.log("\n📋 Planned Processing Order:");
-  sortedUrls.forEach((url, index) => {
-    const depth = url.computedUrl.split("/").filter(Boolean).length;
-    console.log(`  ${index + 1}. [Depth: ${depth}] ${url.computedUrl}`);
+  console.log("🌳 ROOT PAGES:");
+  rootPages.forEach((url, index) => {
+    console.log(`  ${index + 1}. [Root] ${url.computedUrl}`);
   });
+
+  console.log("\n📂 CHILD PAGES:");
+  childPages.forEach((url, index) => {
+    const depth = url.depth;
+    console.log(
+      `  ${index + 1}. [Depth: ${depth}] ${"  ".repeat(depth)}${
+        url.computedUrl
+      }`
+    );
+  });
+  console.log("");
 
   return sortedUrls;
 }
@@ -143,51 +172,69 @@ async function verifyParentHierarchy(url) {
     return true;
   }
 
-  // For nested pages, check the entire hierarchy
-  console.log(`👆 Checking full hierarchy for: ${pathSegments.join("/")}`);
-
   // Check if this exact page already exists
-  const existingPageId = await findPageBySlug(pathSegments.join("/"));
+  const fullPath = pathSegments.join("/");
+  const existingPageId = await findPageBySlug(fullPath);
   if (existingPageId) {
     console.log(`⚠️ Page already exists with ID: ${existingPageId}`);
     return false;
   }
 
-  // Check if parent exists
-  const parentPath = pathSegments.slice(0, -1).join("/");
-  const parentId = await findPageBySlug(parentPath);
+  // For nested pages, verify the parent hierarchy exists
+  const { postToWordPress } = require("../postToWordpress");
 
-  if (!parentId) {
-    if (pathSegments.length === 2) {
-      // Only auto-create parent if it's a root-level parent
-      console.log(`📝 Need to create root-level parent: ${parentPath}`);
+  // Check each level of the hierarchy
+  let parentPages = new Map(); // Keep track of found parent pages
+
+  for (let i = 1; i < pathSegments.length; i++) {
+    const parentPath = pathSegments.slice(0, i).join("/");
+    console.log(`👆 Checking parent: ${parentPath}`);
+
+    const parentId = await findPageBySlug(parentPath);
+    if (parentId) {
+      console.log(`✅ Parent exists: ${parentPath} with ID: ${parentId}`);
+      parentPages.set(parentPath, parentId);
+      continue; // Skip to next parent check since this one exists
+    }
+
+    // Only create parent if we don't already have it
+    if (!parentPages.has(parentPath)) {
+      console.log(`📝 Creating missing parent: ${parentPath}`);
       try {
-        const parentTitle = pathSegments[0].replace(/-/g, " ");
+        const parentSlug = pathSegments[i - 1];
+        const parentTitle = parentSlug.replace(/-/g, " ");
         const dummyContent = `<!-- wp:paragraph --><p>Parent page for ${parentTitle}</p><!-- /wp:paragraph -->`;
-        const { postToWordPress } = require("../postToWordpress");
         const newParentId = await postToWordPress({
           title: parentTitle.charAt(0).toUpperCase() + parentTitle.slice(1),
           content: dummyContent,
           status: "publish",
           slug: parentPath,
         });
-        if (newParentId) {
-          console.log(
-            `✅ Created root-level parent page with ID: ${newParentId}`
-          );
-          return true;
+
+        if (!newParentId) {
+          console.error(`❌ Failed to create parent page: ${parentPath}`);
+          console.log(`🔍 HIERARCHY CHECK END ---------------------\n`);
+          return false;
         }
+        console.log(
+          `✅ Created parent page: ${parentPath} with ID: ${newParentId}`
+        );
+        parentPages.set(parentPath, newParentId);
+
+        // Add a small delay to ensure WordPress processes the new page
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (error) {
-        console.error(`❌ Failed to create parent page: ${error.message}`);
+        console.error(
+          `❌ Error creating parent page ${parentPath}:`,
+          error.message
+        );
+        console.log(`🔍 HIERARCHY CHECK END ---------------------\n`);
         return false;
       }
     }
-    console.log(`❌ Parent not found: ${parentPath}`);
-    console.log(`🔍 HIERARCHY CHECK END ---------------------\n`);
-    return false;
   }
 
-  console.log(`✅ Parent exists with ID: ${parentId}`);
+  console.log(`✅ Full hierarchy verified/created successfully`);
   console.log(`🔍 HIERARCHY CHECK END ---------------------\n`);
   return true;
 }

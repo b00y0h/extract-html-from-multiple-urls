@@ -350,15 +350,11 @@ async function findPageBySlug(slug) {
     });
 
     if (response.data && response.data.length > 0) {
-      // For root-level pages (no parent path), find one with no parent
+      // Check if any page exists with this slug
       if (pathSegments.length === 1) {
-        const rootPage = response.data.find((page) => page.parent === 0);
-        if (rootPage) {
-          console.log(
-            `✅ Found root-level page ID: ${rootPage.id} for: ${searchSlug}`
-          );
-          return rootPage.id;
-        }
+        // For root pages, return the first one found with this slug
+        console.log(`✅ Found existing page with slug "${searchSlug}", ID: ${response.data[0].id}`);
+        return response.data[0].id;
       }
       // For nested pages, verify the full path matches
       else {
