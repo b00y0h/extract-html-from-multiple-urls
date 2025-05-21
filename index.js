@@ -456,7 +456,7 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     const axiosConfig = {
       httpsAgent: new https.Agent({ rejectUnauthorized: false }),
       headers: {
-        "User-Agent": config.crawler.userAgent,
+        "User-Agent": USER_AGENT,
       },
       maxRedirects: 10,
       validateStatus: function (status) {

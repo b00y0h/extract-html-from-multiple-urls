@@ -574,3 +574,163 @@ Form Fields:
   - hidden: form_id
 ==================
 
+[2025-05-21T14:16:22.151Z] 
+=== FORM FOUND ===
+Page URL: https://library.vancouver.wsu.edu
+WordPress Destination URL: /academics/library
+Form Action: undefined
+Form Method: get
+Form ID: 
+Form Fields:
+==================
+
+[2025-05-21T14:20:10.942Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+WordPress Destination URL: /admission/registration-records/request-student-record-data
+Form Action: /registrars-office/request-student-record-data
+Form Method: post
+Form ID: webform-submission-student-record-request-form-node-803-add-form
+Form Fields:
+  - text: first_name
+  - text: middle_initial
+  - text: last_name
+  - email: email
+  - text: department_organization
+  - textarea: purpose
+  - checkbox: data_name_format[columns]
+  - checkbox: data_name_format[single_cell]
+  - checkbox: data_address_contact_info[address_local]
+  - checkbox: data_address_contact_info[address_permanent]
+  - checkbox: data_address_contact_info[phone]
+  - checkbox: data_address_contact_info[email]
+  - checkbox: data_class_standing[freshman]
+  - checkbox: data_class_standing[sophomore]
+  - checkbox: data_class_standing[junior]
+  - checkbox: data_class_standing[senior]
+  - checkbox: data_class_standing[post_bachelor]
+  - checkbox: data_class_standing[graduate]
+  - checkbox: data_class_standing[non_degree]
+  - checkbox: data_student_type[prospect]
+  - checkbox: data_student_type[applicant]
+  - checkbox: data_student_type[current]
+  - checkbox: data_student_type[former]
+  - select: major
+  - textarea: specific_majors
+  - text: snapshot_year
+  - select: snapshot_term
+  - checkbox: snapshot_date[first_day]
+  - checkbox: snapshot_date[census_day]
+  - checkbox: snapshot_date[30th_day]
+  - checkbox: snapshot_date[current_date]
+  - text: degree_conferred_year
+  - select: degree_conferred_term
+  - text: degree_applied_year
+  - select: degree_applied_term
+  - textarea: additional_information_not_noted
+  - date: data_delivery_date
+  - checkbox: data_report_format[checkboxes][excel]
+  - checkbox: data_report_format[checkboxes][pdf]
+  - checkbox: data_report_format[checkboxes][txt]
+  - checkbox: data_report_format[checkboxes][csv]
+  - checkbox: data_report_format[checkboxes][_other_]
+  - text: data_report_format[other]
+  - checkbox: i_agree
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-05-21T14:20:18.094Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+WordPress Destination URL: /admission/visit-connect/request-ambassador
+Form Action: /admissions/request-ambassador
+Form Method: post
+Form ID: webform-submission-ambassador-request-form-node-804-add-form
+Form Fields:
+  - textarea: event_description
+  - textarea: event_preparation
+  - text: event_location
+  - select: event_date[month]
+  - select: event_date[day]
+  - select: event_date[year]
+  - text: what_time_does_the_event_start_
+  - text: what_time_does_the_event_end_
+  - text: what_time_ambassador_arrive
+  - text: what_time_ambassador_leave
+  - textarea: ambassador_duties
+  - text: ambassadors_needed
+  - textarea: ambassador_arrival_meet_location
+  - textarea: ambassador_transportation
+  - text: event_contact_name
+  - text: phone
+  - email: email
+  - textarea: additional_information_requests
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-05-21T14:20:31.908Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+WordPress Destination URL: /student-life-and-support/access-center/closed-captioning-request
+Form Action: /access-center/closed-captioning-request
+Form Method: post
+Form ID: webform-submission-closed-captioning-request-form-node-811-add-form
+Form Fields:
+  - text: instructor_first_name
+  - text: instructor_last_name
+  - email: instructor_email
+  - text: course
+  - select: term
+  - text: year
+  - textarea: materials_due_dates
+  - select: primary_purpose
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-05-21T14:21:03.737Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+WordPress Destination URL: /student-life-and-support/diversity-inclusion/thrive
+Form Action: /cila/thrive
+Form Method: post
+Form ID: webform-submission-thrive-application-node-3577-add-form
+Form Fields:
+  - text: first_name
+  - text: last_name
+  - text: middle_initial
+  - text: preferred_name
+  - email: email
+  - text: wsu_id
+  - text: ethnicity_gender_identification
+  - text: summer_address[address]
+  - text: summer_address[city]
+  - select: summer_address[state_province]
+  - text: summer_address[postal_code]
+  - text: phone_home
+  - text: phone_cell
+  - text: emergency_contact_name
+  - text: phone_emergency_contact
+  - select: fafsa_finaid
+  - textarea: health_issues_accommodations
+  - select: photographs_allowed
+  - textarea: three_things
+  - textarea: one_value
+  - checkbox: participation_agreement
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-05-21T14:23:51.246Z] 
+=== FORM FOUND ===
+Page URL: https://www.vancouver.wsu.edu
+WordPress Destination URL: /about/departments/public-safety/annual-security-report
+Form Action: /safety/annual-security-report
+Form Method: get
+Form ID: views-exposed-form-annual-security-report-page-1
+Form Fields:
+  - select: tid
+==================
+
