@@ -231,7 +231,7 @@ async function updateSheetWithTimestamp(auth, rowIndex, pageId) {
       })
       .replace(",", "");
 
-    const wordpressLink = `${config.wordpress.apiBaseUrl}/wp-admin/post.php?post=${pageId}&action=edit`;
+    const wordpressLink = `${config.wordpress.baseUrl}/wp-admin/post.php?post=${pageId}&action=edit`;
 
     const request = {
       spreadsheetId: SHEET_ID,

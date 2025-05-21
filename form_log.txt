@@ -406,3 +406,80 @@ Form Fields:
   - select: tid
 ==================
 
+[2025-05-20T23:56:52.232Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+Form Action: /event-accommodation-request
+Form Method: post
+Form ID: webform-submission-event-accommodation-request-node-3655-add-form
+Form Fields:
+  - text: first_name
+  - text: last_name
+  - email: email
+  - text: phone
+  - select: contact_preference
+  - text: event_title
+  - date: event_date_
+  - time: start_time_
+  - time: event_end_time
+  - text: event_sponsor_presenter
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Wheelchair accessibility]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Special furniture]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Reserved Preferential Seating]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Need space for service animal]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Dietary restrictions]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Electrical power source for charging batteries for assistive devices]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Assistive listening devices]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Sign language interpreter]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Real-time captioning (CART)]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Access to PowerPoint or presentation materials in advance]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Sighted guides for assistance to and from specific sessions]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Large print]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Materials in digital format]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Materials in paper format]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Braille]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][_other_]
+  - textarea: please_indicate_if_you_require_any_of_the_following_accommodatio[other]
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-05-21T00:16:17.351Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+Form Action: /submit-housing-bulletin-board-listing
+Form Method: post
+Form ID: webform-submission-housing-bulletin-board-submissio-node-818-add-form
+Form Fields:
+  - text: listing_title
+  - textarea: listing_description
+  - text: first_name
+  - text: last_name
+  - email: email
+  - text: phone
+  - checkbox: displayed_contact_information[first_name]
+  - checkbox: displayed_contact_information[email]
+  - checkbox: displayed_contact_information[phone]
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-05-21T03:54:42.336Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+Form Action: /access-center/closed-captioning-request
+Form Method: post
+Form ID: webform-submission-closed-captioning-request-form-node-811-add-form
+Form Fields:
+  - text: instructor_first_name
+  - text: instructor_last_name
+  - email: instructor_email
+  - text: course
+  - select: term
+  - text: year
+  - textarea: materials_due_dates
+  - select: primary_purpose
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+

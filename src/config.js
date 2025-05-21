@@ -4,6 +4,7 @@ const path = require("path");
 module.exports = {
   // WordPress API settings
   wordpress: {
+    baseUrl: process.env.WP_BASE_URL,
     apiBaseUrl: process.env.WP_API_BASE_URL
       ? process.env.WP_API_BASE_URL.replace(/\/+$/, "")
       : "",

@@ -129,14 +129,6 @@ function sortUrlsByHierarchy(urls) {
 
   return sortedUrls;
 }
-const WPAPI = require("wpapi");
-
-// Initialize the WordPress API client
-const wp = new WPAPI({
-  endpoint: config.wordpress.apiBaseUrl,
-  username: config.wordpress.username,
-  password: config.wordpress.password,
-});
 
 // Add this function to verify parent exists before processing
 async function verifyParentHierarchy(url, action = "Move") {
