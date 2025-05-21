@@ -483,3 +483,94 @@ Form Fields:
   - hidden: form_id
 ==================
 
+[2025-05-21T03:57:28.977Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+Form Action: /career-services/request-additional-support
+Form Method: post
+Form ID: webform-submission-barrier-to-employment-node-4024-add-form
+Form Fields:
+  - text: first_name
+  - text: last_name
+  - email: email
+  - text: wsu_id
+  - textarea: please_describe_the_obstacles_that_are_preventing_you_from_achie
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-05-21T03:57:31.232Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+Form Action: /career-services/campus-student-employment-job-template-form
+Form Method: post
+Form ID: webform-submission-on-campus-student-employment-job-node-3803-add-form
+Form Fields:
+  - text: first_name
+  - text: last_name
+  - email: email
+  - text: phone
+  - text: where_apply
+  - text: job_title
+  - text: company_division
+  - text: job_type
+  - text: duration
+  - text: start_date
+  - text: job_end_date
+  - text: work_study_students_only
+  - text: application_open_date
+  - text: application_close_date
+  - textarea: job_description
+  - text: number_openings
+  - text: location
+  - text: salary
+  - text: documents
+  - text: minimum_gpa
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-05-21T03:57:32.981Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+Form Action: /career-services/career-presentation-request-form
+Form Method: post
+Form ID: webform-submission-career-presentation-request-node-3897-add-form
+Form Fields:
+  - text: first_name
+  - text: last_name
+  - email: email
+  - text: phone
+  - text: audience
+  - text: date_time
+  - checkbox: subject[checkboxes][resume_coverletter]
+  - checkbox: subject[checkboxes][networking]
+  - checkbox: subject[checkboxes][linkedin]
+  - checkbox: subject[checkboxes][interviewing]
+  - checkbox: subject[checkboxes][salary]
+  - checkbox: subject[checkboxes][career_exploration]
+  - checkbox: subject[checkboxes][_other_]
+  - text: subject[other]
+  - textarea: looking_for
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-05-21T03:58:19.289Z] 
+=== FORM FOUND ===
+Page URL: https://business.vancouver.wsu.edu
+Form Action: /business-growth-map/zoom-workshops
+Form Method: post
+Form ID: webform-submission-business-growth-map-zoom-worksho-node-48-add-form
+Form Fields:
+  - text: first_name
+  - text: last_name
+  - text: company_name
+  - email: email_address
+  - text: phone_number
+  - select: session_options
+  - textarea: specific_questions_speaker
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
