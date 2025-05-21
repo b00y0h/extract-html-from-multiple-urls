@@ -289,7 +289,8 @@ async function processContent(
     const transformResult = await transformToWPBlocks(
       contentHtml,
       originalUrl,
-      successfulMedia // Pass the processed media results
+      successfulMedia, // Pass the processed media results
+      computedUrl // Pass the WordPress destination URL
     );
 
     let transformedToWPContent = transformResult.content;

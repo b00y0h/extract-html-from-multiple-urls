@@ -1,7 +1,7 @@
 const config = require("../config");
 const { logMessage } = require("../utils/logs");
 
-function handleForms($, rootUrl) {
+function handleForms($, rootUrl, wpDestinationUrl) {
   // Handle <form> tags
   $("form").each((i, el) => {
     const $form = $(el);
@@ -25,6 +25,7 @@ function handleForms($, rootUrl) {
     const logEntry = [
       `\n=== FORM FOUND ===`,
       `Page URL: ${rootUrl}`,
+      `WordPress Destination URL: ${wpDestinationUrl || "Not specified"}`,
       `Form Action: ${action}`,
       `Form Method: ${method}`,
       `Form ID: ${id}`,

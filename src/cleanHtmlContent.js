@@ -26,10 +26,12 @@ const { getRootUrl } = require("./utils/urls");
 async function transformToWPBlocks(
   contentHtml,
   originalUrl,
-  mediaResults = []
+  mediaResults = [],
+  computedUrl = null
 ) {
   console.log("\n🔄 TRANSFORM START ---------------------");
   console.log("🌐 Original URL:", originalUrl);
+  console.log("🎯 WordPress Destination URL:", computedUrl || "Not specified");
 
   try {
     const $ = cheerio.load(contentHtml);
@@ -60,7 +62,8 @@ async function transformToWPBlocks(
     cleanUpContent($);
     handleParagraphs($);
     handleButtons($);
-    handleForms($, rootUrl);
+    // Pass the computedUrl which is the WordPress destination where the form should live
+    handleForms($, rootUrl, computedUrl);
     handleHeadings($);
     handleLists($);
     handleTables($);
