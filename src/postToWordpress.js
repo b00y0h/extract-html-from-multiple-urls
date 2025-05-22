@@ -118,10 +118,11 @@ async function processImage(image) {
 }
 
 // Process the content of a URL and save it to a file
-async function postToWordPress(url, content, title) {
+async function postToWordPress(url, content, title, action = "Move") {
   console.log("\n[POST TO WORDPRESS] ---------------------");
   console.log(`Processing URL: ${url}`);
   console.log(`Title: ${title}`);
+  console.log(`Action: ${action}`);
 
   try {
     // Handle if url is an object with originalUrl property
@@ -130,14 +131,98 @@ async function postToWordPress(url, content, title) {
       throw new Error(`Invalid URL provided: ${JSON.stringify(url)}`);
     }
 
-    // Get the slug from the URL
-    const pathSegments = urlStr.split("/").filter(Boolean);
-    const slug = pathSegments[pathSegments.length - 1] || "home";
+    // Get the path segments from the URL
+    const pathSegments = urlStr
+      .replace(/^(?:https?:\/\/)?(?:www\.)?[^/]+\//, "") // Remove domain part
+      .split("/")
+      .filter(Boolean);
+
+    console.log(`Path segments:`, pathSegments);
+
+    // Get the slug (last segment)
+    const slug =
+      pathSegments.length > 0 ? pathSegments[pathSegments.length - 1] : "home";
     console.log(`Using slug: ${slug}`);
 
-    // First check if page already exists
-    const existingPageId = await findPageBySlug(slug);
-    if (existingPageId) {
+    // First check if exact page already exists at the correct path
+    let parentId = 0; // Start at root level
+
+    // If this isn't a root page, we need to get the parent ID by traversing the path
+    if (pathSegments.length > 1) {
+      console.log(`Resolving parent hierarchy for: ${urlStr}`);
+
+      // Traverse the path segments except the last one to get the parent ID
+      for (let i = 0; i < pathSegments.length - 1; i++) {
+        const currentSlug = pathSegments[i];
+        console.log(
+          `Checking segment ${i + 1}/${pathSegments.length - 1}: ${currentSlug}`
+        );
+
+        // Find the page at this level with the correct parent
+        const pageId = await findPageBySlug(currentSlug, parentId);
+
+        if (!pageId) {
+          // If we're creating pages and a level doesn't exist, create it
+          if (action === "Create") {
+            console.log(`Creating missing hierarchy level: ${currentSlug}`);
+            const placeholderTitle =
+              currentSlug.charAt(0).toUpperCase() +
+              currentSlug.slice(1).replace(/-/g, " ");
+
+            // Create placeholder page
+            const placeholderData = {
+              title: placeholderTitle,
+              content: `<!-- wp:paragraph --><p>This is a placeholder page for ${placeholderTitle}.</p><!-- /wp:paragraph -->`,
+              status: "publish",
+              slug: currentSlug,
+            };
+
+            // Set parent if not at root
+            if (parentId > 0) {
+              placeholderData.parent = parentId;
+            }
+
+            // Create the page
+            console.log(
+              `Creating placeholder page with data:`,
+              placeholderData
+            );
+            const newPage = await wp.pages().create(placeholderData);
+            parentId = newPage.id;
+            console.log(`Created placeholder page with ID: ${parentId}`);
+          } else {
+            throw new Error(
+              `Parent path segment "${currentSlug}" not found. Cannot create child page.`
+            );
+          }
+        } else {
+          console.log(
+            `Found existing page for segment "${currentSlug}" with ID: ${pageId}`
+          );
+          parentId = pageId;
+        }
+      }
+    }
+
+    // Now check if the final page exists at this location
+    const existingPageId = await findPageBySlug(slug, parentId);
+
+    // If not found by slug and parent, try by full path
+    if (!existingPageId) {
+      // Construct the full path for this page
+      const fullPath = pathSegments.join("/");
+      console.log(`Trying to find page by full path: ${fullPath}`);
+      const pageByPath = await findPageByPath(fullPath);
+
+      if (pageByPath) {
+        console.log(
+          `Found page by full path with ID ${pageByPath}, ✨ skipping creation`
+        );
+        return { pageId: pageByPath };
+      }
+
+      console.log(`No page found by full path, will create new page`);
+    } else {
       console.log(
         `Page already exists with ID ${existingPageId}, ✨ skipping creation`
       );
@@ -154,34 +239,8 @@ async function postToWordPress(url, content, title) {
       slug: slug,
     };
 
-    // Handle parent pages
-    if (pathSegments.length > 1) {
-      // This is a child page, get its parent
-      const parentSlug = pathSegments[pathSegments.length - 2];
-      console.log(`Looking for parent page with slug: ${parentSlug}`);
-
-      let parentId = await findPageBySlug(parentSlug);
-
-      // For Create action, if parent doesn't exist, create it first
-      if (!parentId && action === "Create") {
-        console.log(
-          `Parent page "${parentSlug}" doesn't exist. Creating it...`
-        );
-        const parentResult = await postToWordPress(
-          `/pages/${parentSlug}`,
-          "", // Empty content for placeholder
-          parentSlug.charAt(0).toUpperCase() +
-            parentSlug.slice(1).replace(/-/g, " "), // Title from slug
-          "Create" // Action
-        );
-        parentId = parentResult.pageId;
-        console.log(`Created parent page with ID: ${parentId}`);
-      } else if (!parentId) {
-        throw new Error(
-          `Parent page with slug "${parentSlug}" not found. Cannot create child page.`
-        );
-      }
-
+    // Set parent ID if this isn't a root page
+    if (parentId > 0) {
       pageData.parent = parentId;
       console.log(`Setting parent ID: ${parentId}`);
     } else {
@@ -238,27 +297,138 @@ async function updateParentPage(pageId, parentPageId) {
 }
 
 // Function to find a WordPress page by slug
-async function findPageBySlug(slug) {
+async function findPageBySlug(slug, parentId = null) {
   console.log("\n[FIND PAGE] ---------------------");
   console.log(`Searching for page with slug: ${slug}`);
+  if (parentId !== null) {
+    console.log(`With parent ID: ${parentId}`);
+  }
 
   try {
     // Normalize the slug to ensure consistent matching
     const normalizedSlug = slug.toLowerCase().trim();
 
-    // Search specifically for the page with this slug
-    const matchingPages = await wp.pages().param("slug", normalizedSlug);
+    // Get all pages with this slug first
+    const matchingPages = await wp.pages().slug(normalizedSlug);
 
-    if (matchingPages && matchingPages.length > 0) {
-      const existingPage = matchingPages[0];
-      console.log(`Found existing page with ID: ${existingPage.id}`);
-      return existingPage.id;
+    console.log(
+      `Found ${matchingPages?.length || 0} pages with slug "${slug}"`
+    );
+
+    if (!matchingPages || matchingPages.length === 0) {
+      console.log(`No existing page found with slug: ${slug}`);
+      return null;
     }
 
-    console.log(`No existing page found with slug: ${slug}`);
-    return null;
+    // If parentId is specified, find a page with the exact parent
+    if (parentId !== null) {
+      console.log(`Looking for page with parent ID: ${parentId}`);
+
+      // Find the page with the matching parent
+      const pageWithMatchingParent = matchingPages.find(
+        (page) => page.parent === parentId
+      );
+
+      if (pageWithMatchingParent) {
+        console.log(
+          `Found page with ID: ${pageWithMatchingParent.id} and matching parent ID: ${parentId}`
+        );
+        return pageWithMatchingParent.id;
+      } else {
+        console.log(
+          `No page found with slug "${slug}" and parent ID: ${parentId}`
+        );
+
+        // Display all found pages for debugging
+        matchingPages.forEach((page) => {
+          console.log(
+            `- Page ID: ${page.id}, Parent: ${page.parent}, Link: ${page.link}`
+          );
+        });
+
+        return null;
+      }
+    }
+
+    // If no parent specified, return a page at root level first (parent=0) if available
+    const rootPage = matchingPages.find((page) => page.parent === 0);
+    if (rootPage) {
+      console.log(
+        `Found root level page with ID: ${rootPage.id} and slug "${slug}"`
+      );
+      return rootPage.id;
+    }
+
+    // If no specific requirements, return the first page found
+    console.log(
+      `Found page with ID: ${matchingPages[0].id}, Parent ID: ${matchingPages[0].parent}`
+    );
+    return matchingPages[0].id;
   } catch (error) {
     console.error(`Error finding page by slug: ${error.message}`);
+    throw error;
+  }
+}
+
+// Function to find a page by its complete path
+async function findPageByPath(fullPath) {
+  console.log("\n[FIND PAGE BY PATH] ---------------------");
+  console.log(`Searching for page with path: ${fullPath}`);
+
+  try {
+    // Normalize the path
+    const normalizedPath = fullPath.replace(/^\/|\/$/g, "");
+    const pathSegments = normalizedPath.split("/").filter(Boolean);
+
+    // If path is empty, we're looking for the home page
+    if (pathSegments.length === 0) {
+      console.log(`Looking for home page`);
+      const homePage = await findPageBySlug("home");
+      return homePage;
+    }
+
+    // Get the slug (last part of the path)
+    const slug = pathSegments[pathSegments.length - 1];
+    console.log(`Target slug: ${slug}`);
+
+    // Get all pages with this slug
+    const matchingPages = await wp.pages().slug(slug);
+
+    if (!matchingPages || matchingPages.length === 0) {
+      console.log(`No pages found with slug: ${slug}`);
+      return null;
+    }
+
+    console.log(`Found ${matchingPages.length} pages with slug "${slug}"`);
+
+    // For each matching page, check if its full path matches our target
+    for (const page of matchingPages) {
+      // Get page link and convert to path
+      const pageLink = page.link;
+      console.log(`Checking page ${page.id} with link: ${pageLink}`);
+
+      // Extract path from link
+      let pagePath = "";
+      try {
+        const url = new URL(pageLink);
+        pagePath = url.pathname.replace(/^\/|\/$/g, "");
+        console.log(`Extracted path: ${pagePath}`);
+      } catch (e) {
+        console.error(`Error parsing URL: ${e.message}`);
+        continue;
+      }
+
+      // Check if paths match
+      if (pagePath === normalizedPath) {
+        console.log(`✅ Found exact path match: Page ID ${page.id}`);
+        return page.id;
+      }
+    }
+
+    console.log(`No page found with exact path: ${normalizedPath}`);
+    return null;
+  } catch (error) {
+    console.error(`Error finding page by path: ${error.message}`);
     throw error;
   }
 }
@@ -282,4 +452,5 @@ module.exports = {
       : null;
   },
   findPageBySlug,
+  findPageByPath,
 };

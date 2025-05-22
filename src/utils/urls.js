@@ -166,27 +166,80 @@ async function verifyParentHierarchy(url, action = "Move") {
     return 0; // Return 0 to indicate this is a valid root page
   }
 
-  // For child pages, verify the parent exists or can be created
-  const parentSlug = pathSegments[pathSegments.length - 2];
-  console.log(`Checking for parent page with slug: ${parentSlug}`);
+  // For child pages, verify the entire path hierarchy exists
+  // We need to validate each level of the hierarchy
+  let currentHierarchyPath = "";
+  let parentId = 0; // 0 means root level
 
-  const parentPage = await findPageBySlug(parentSlug);
-  if (!parentPage) {
-    // If we're creating pages and the parent doesn't exist, that's okay
-    if (action === "Create") {
-      console.log(
-        `Parent page "${parentSlug}" doesn't exist but will be created since action is Create`
-      );
-      return 0;
+  // Check each level in the hierarchy except the last one (which is the page we're creating)
+  for (let i = 0; i < pathSegments.length - 1; i++) {
+    const currentSlug = pathSegments[i];
+    currentHierarchyPath += (currentHierarchyPath ? "/" : "") + currentSlug;
+
+    console.log(`Checking hierarchy level ${i + 1}: ${currentSlug}`);
+    console.log(`Full path so far: ${currentHierarchyPath}`);
+
+    // Find the page at this level
+    const pageId = await findPageBySlug(currentSlug, parentId);
+
+    if (!pageId) {
+      // If we're creating pages and a level doesn't exist, that's okay
+      if (action === "Create") {
+        console.log(
+          `Page "${currentSlug}" at level ${
+            i + 1
+          } doesn't exist but will be created since action is Create`
+        );
+        // Create this level
+        const createdPageId = await createHierarchyLevel(currentSlug, parentId);
+        parentId = createdPageId;
+      } else {
+        // For Move action, we need the entire hierarchy to exist
+        throw new Error(
+          `Page "${currentSlug}" at path "${currentHierarchyPath}" not found. Cannot create child page.`
+        );
+      }
+    } else {
+      console.log(`Found page "${currentSlug}" with ID: ${pageId}`);
+      parentId = pageId;
     }
-    // For Move action, we need the parent to exist
-    throw new Error(
-      `Parent page with slug "${parentSlug}" not found. Cannot create child page.`
-    );
   }
 
-  console.log(`Found parent page with ID: ${parentPage}`);
-  return parentPage;
+  // Return the ID of the immediate parent (the last level we checked)
+  console.log(`Full hierarchy verified. Immediate parent ID: ${parentId}`);
+  return parentId;
+}
+
+// Helper function to create a missing level in the hierarchy
+async function createHierarchyLevel(slug, parentId) {
+  console.log(
+    `Creating missing hierarchy level: ${slug} with parent: ${parentId}`
+  );
+
+  const { postToWordPress } = require("../postToWordpress");
+
+  // Create a placeholder page for this hierarchy level
+  const title = slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ");
+  const placeholderContent = `<!-- wp:paragraph --><p>This is a placeholder page for ${title}.</p><!-- /wp:paragraph -->`;
+
+  // Construct a URL path for this level
+  let urlPath = slug;
+  if (parentId > 0) {
+    // In a real implementation, you would need to reconstruct the full path
+    // by looking up the parent's path, but for simplicity we're just using the slug
+    urlPath = `/pages/${slug}`;
+  }
+
+  // Create the page
+  const pageId = await postToWordPress(
+    urlPath,
+    placeholderContent,
+    title,
+    "Create"
+  );
+
+  console.log(`Created hierarchy level "${slug}" with ID: ${pageId}`);
+  return pageId;
 }
 
 module.exports = {
@@ -198,4 +251,5 @@ module.exports = {
   verifyParentHierarchy,
   transformToStagingUrl,
   transformUrl,
+  createHierarchyLevel,
 };

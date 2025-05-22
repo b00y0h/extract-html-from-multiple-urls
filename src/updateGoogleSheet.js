@@ -20,6 +20,7 @@ const COLUMNS = {
   COMPUTED_URL_FORMULA: "Destination",
   WORDPRESS_LINK: "Wordpress Link",
   PROCESS_FIRST: "Process First",
+  MENU: "Main Menu",
 };
 
 // Action values
@@ -30,8 +31,8 @@ const ACTION_VALUES = {
 
 // Range constants
 const RANGES = {
-  ALL_COLUMNS: "A1:Q",
-  HEADERS: "A1:Q1",
+  ALL_COLUMNS: "A1:R",
+  HEADERS: "A1:R1",
 };
 
 async function getAuthToken() {
@@ -262,4 +263,8 @@ module.exports = {
   appendToSheet,
   getUrlsFromSheet,
   updateSheetWithTimestamp,
+  SHEET_NAMES,
+  COLUMNS,
+  RANGES,
+  ACTION_VALUES,
 };

@@ -38,6 +38,7 @@ module.exports = {
     apiLogFile: "API_log.txt",
     crawlingLogFile: "crawling_log.txt",
     formLogFile: "form_log.txt",
+    createMenuLogFile: "create_menu_log.txt",
     imagesDir: path.join(process.cwd(), "images"), // Directory to store downloaded images
   },
 };

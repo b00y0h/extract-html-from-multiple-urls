@@ -1,0 +1,957 @@
+[2025-05-21T21:31:05.441Z] Starting WordPress menu creation from Google Sheet...
+[2025-05-21T21:31:05.444Z] Getting menu items from Google Sheet ID: 1uWPWf878Jie60hoYcS9j_WkPQ8M6eRQetceDDe9uM6E
+[2025-05-21T21:31:06.029Z] Found 48 menu items from sheet
+[2025-05-21T21:31:06.030Z] Menu hierarchy parsed with structure:
+[2025-05-21T21:31:06.030Z] [
+  {
+    "spreadsheetTitle": "https://www.vancouver.wsu.edu/about-wsu-vancouver",
+    "slug": "about",
+    "url": "/about",
+    "menuNumber": 1,
+    "parentNumber": null,
+    "children": [
+      {
+        "spreadsheetTitle": "",
+        "slug": "about/auxiliary-services",
+        "url": "/about/auxiliary-services",
+        "menuNumber": 1.01,
+        "parentNumber": "1.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://www.vancouver.wsu.edu/event/calendar",
+        "slug": "about/calendar",
+        "url": "/about/calendar",
+        "menuNumber": 1.02,
+        "parentNumber": "1.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://www.vancouver.wsu.edu/art-campus",
+        "slug": "about/art-campus",
+        "url": "/about/art-campus",
+        "menuNumber": 1.03,
+        "parentNumber": "1.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://www.vancouver.wsu.edu/about/history-wsu-vancouver-campus",
+        "slug": "about/history",
+        "url": "/about/history",
+        "menuNumber": 1.04,
+        "parentNumber": "1.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://www.vancouver.wsu.edu/campus-map-directions",
+        "slug": "about/campus-map-direction",
+        "url": "/about/campus-map-direction",
+        "menuNumber": 1.05,
+        "parentNumber": "1.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "about/stories",
+        "url": "/about/stories",
+        "menuNumber": 1.06,
+        "parentNumber": "1.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "about/community",
+        "url": "/about/community",
+        "menuNumber": 1.07,
+        "parentNumber": "1.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "about/titan-vancoug-corpse-flower",
+        "url": "/about/titan-vancoug-corpse-flower",
+        "menuNumber": 1.07,
+        "parentNumber": "1.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "about/departments",
+        "url": "/about/departments",
+        "menuNumber": 1.08,
+        "parentNumber": "1.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "about/governance",
+        "url": "/about/governance",
+        "menuNumber": 1.09,
+        "parentNumber": "1.00",
+        "children": []
+      }
+    ]
+  },
+  {
+    "spreadsheetTitle": "",
+    "slug": "academics",
+    "url": "/academics",
+    "menuNumber": 2,
+    "parentNumber": null,
+    "children": [
+      {
+        "spreadsheetTitle": "",
+        "slug": "academics/academic-services",
+        "url": "/academics/academic-services",
+        "menuNumber": 2.01,
+        "parentNumber": "2.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "academics/assessments",
+        "url": "/academics/assessments",
+        "menuNumber": 2.03,
+        "parentNumber": "2.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://studentaffairs.vancouver.wsu.edu/registrars-office/course-catalog",
+        "slug": "academics/course-catalog",
+        "url": "/academics/course-catalog",
+        "menuNumber": 2.04,
+        "parentNumber": "2.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://studentaffairs.vancouver.wsu.edu/admissions/degrees-majors-programs",
+        "slug": "academics/degrees-majors-programs",
+        "url": "/academics/degrees-majors-programs",
+        "menuNumber": 2.05,
+        "parentNumber": "2.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "academics/learning-support",
+        "url": "/academics/learning-support",
+        "menuNumber": 2.06,
+        "parentNumber": "2.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://library.vancouver.wsu.edu/about-library",
+        "slug": "academics/library/about",
+        "url": "/academics/library/about",
+        "menuNumber": 2.07,
+        "parentNumber": "2.00",
+        "children": []
+      }
+    ]
+  },
+  {
+    "spreadsheetTitle": "https://studentaffairs.vancouver.wsu.edu/admissions",
+    "slug": "admission",
+    "url": "/admission",
+    "menuNumber": 3,
+    "parentNumber": null,
+    "children": [
+      {
+        "spreadsheetTitle": "https://studentaffairs.vancouver.wsu.edu/admissions/admission-requirements",
+        "slug": "admission/admission-requirements",
+        "url": "/admission/admission-requirements",
+        "menuNumber": 3.01,
+        "parentNumber": "3.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "admission/application-process",
+        "url": "/admission/application-process",
+        "menuNumber": 3.01,
+        "parentNumber": "3.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "admission/community-college-transfer-pathways",
+        "url": "/admission/community-college-transfer-pathways",
+        "menuNumber": 3.02,
+        "parentNumber": "3.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://studentaffairs.vancouver.wsu.edu/admissions/financial-aid",
+        "slug": "admission/financial-aid",
+        "url": "/admission/financial-aid",
+        "menuNumber": 3.03,
+        "parentNumber": "3.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://studentaffairs.vancouver.wsu.edu/admissions/international-student-information",
+        "slug": "admission/international-students",
+        "url": "/admission/international-students",
+        "menuNumber": 3.04,
+        "parentNumber": "3.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://studentaffairs.vancouver.wsu.edu/mywsuinfo",
+        "slug": "admission/mywsu-Information",
+        "url": "/admission/mywsu-Information",
+        "menuNumber": 3.05,
+        "parentNumber": "3.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "admission/new-student-resources",
+        "url": "/admission/new-student-resources",
+        "menuNumber": 3.06,
+        "parentNumber": "3.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "admission/registration-records",
+        "url": "/admission/registration-records",
+        "menuNumber": 3.07,
+        "parentNumber": "3.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "admission/visit-connect",
+        "url": "/admission/visit-connect",
+        "menuNumber": 3.08,
+        "parentNumber": "3.00",
+        "children": []
+      }
+    ]
+  },
+  {
+    "spreadsheetTitle": "https://www.vancouver.wsu.edu/alumni",
+    "slug": "give",
+    "url": "/give",
+    "menuNumber": 4,
+    "parentNumber": null,
+    "children": [
+      {
+        "spreadsheetTitle": "https://www.vancouver.wsu.edu/development-alumni-relations/alumni-relations",
+        "slug": "about/departments/alumni/alumni-relations",
+        "url": "/about/departments/alumni/alumni-relations",
+        "menuNumber": 4.01,
+        "parentNumber": "4.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://www.vancouver.wsu.edu/development-alumni-relations/giving",
+        "slug": "about/departments/alumni/giving",
+        "url": "/about/departments/alumni/giving",
+        "menuNumber": 4.02,
+        "parentNumber": "4.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://www.vancouver.wsu.edu/development-alumni-relations/meet-staff",
+        "slug": "about/departments/alumni/meet-the-staff",
+        "url": "/about/departments/alumni/meet-the-staff",
+        "menuNumber": 4.03,
+        "parentNumber": "4.00",
+        "children": []
+      }
+    ]
+  },
+  {
+    "spreadsheetTitle": "",
+    "slug": "research",
+    "url": "/research",
+    "menuNumber": 5,
+    "parentNumber": null,
+    "children": [
+      {
+        "spreadsheetTitle": "",
+        "slug": "research/research-graduate-education",
+        "url": "/research/research-graduate-education",
+        "menuNumber": 5.01,
+        "parentNumber": "5.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://www.vancouver.wsu.edu/research-showcase",
+        "slug": "research/research-showcase",
+        "url": "/research/research-showcase",
+        "menuNumber": 5.02,
+        "parentNumber": "5.00",
+        "children": []
+      }
+    ]
+  },
+  {
+    "spreadsheetTitle": "https://studentaffairs.vancouver.wsu.edu/current-student-resources",
+    "slug": "student-life-and-support",
+    "url": "/student-life-and-support",
+    "menuNumber": 6,
+    "parentNumber": null,
+    "children": [
+      {
+        "spreadsheetTitle": "https://studentaffairs.vancouver.wsu.edu/access-center",
+        "slug": "student-life-and-support/access-center",
+        "url": "/student-life-and-support/access-center",
+        "menuNumber": 6.01,
+        "parentNumber": "6.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "student-life-and-support/basic-needs",
+        "url": "/student-life-and-support/basic-needs",
+        "menuNumber": 6.02,
+        "parentNumber": "6.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://studentaffairs.vancouver.wsu.edu/career-services",
+        "slug": "student-life-and-support/career-services",
+        "url": "/student-life-and-support/career-services",
+        "menuNumber": 6.03,
+        "parentNumber": "6.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://studentaffairs.vancouver.wsu.edu/registrars-office/commencement",
+        "slug": "student-life-and-support/commencement",
+        "url": "/student-life-and-support/commencement",
+        "menuNumber": 6.04,
+        "parentNumber": "6.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "student-life-and-support/diversity-inclusion",
+        "url": "/student-life-and-support/diversity-inclusion",
+        "menuNumber": 6.05,
+        "parentNumber": "6.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "student-life-and-support/engaged-learning-career-action-center",
+        "url": "/student-life-and-support/engaged-learning-career-action-center",
+        "menuNumber": 6.05,
+        "parentNumber": "6.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "student-life-and-support/student-affairs",
+        "url": "/student-life-and-support/student-affairs",
+        "menuNumber": 6.06,
+        "parentNumber": "6.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "student-life-and-support/student-involvement",
+        "url": "/student-life-and-support/student-involvement",
+        "menuNumber": 6.07,
+        "parentNumber": "6.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "student-life-and-support/student-organizations",
+        "url": "/student-life-and-support/student-organizations",
+        "menuNumber": 6.08,
+        "parentNumber": "6.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "student-life-and-support/student-wellness",
+        "url": "/student-life-and-support/student-wellness",
+        "menuNumber": 6.09,
+        "parentNumber": "6.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "",
+        "slug": "student-life-and-support/veterans-services",
+        "url": "/student-life-and-support/veterans-services",
+        "menuNumber": 6.1,
+        "parentNumber": "6.00",
+        "children": []
+      },
+      {
+        "spreadsheetTitle": "https://cas.vancouver.wsu.edu/writing-center",
+        "slug": "student-life-and-support/writing-center",
+        "url": "/student-life-and-support/writing-center",
+        "menuNumber": 6.11,
+        "parentNumber": "6.00",
+        "children": []
+      }
+    ]
+  }
+]
+[2025-05-21T21:31:06.030Z] Creating WordPress menu: Primary Navigation - 2025-05-21 17:31
+[2025-05-21T21:31:06.104Z] Menu created with ID: 35
+[2025-05-21T21:31:06.105Z] Processing menu item from row: https://www.vancouver.wsu.edu/about-wsu-vancouver (1)
+[2025-05-21T21:31:06.105Z]   - Original URL: /about
+[2025-05-21T21:31:06.105Z]   - Extracted slug: about
+[2025-05-21T21:31:06.105Z] Looking for page with slug: about
+[2025-05-21T21:31:06.105Z] Looking for top-level page with slug: "about"
+[2025-05-21T21:31:06.144Z] Found 1 pages with slug "about" but none are top-level (parent = 0)
+[2025-05-21T21:31:06.144Z] Using hierarchical lookup for: "about"
+[2025-05-21T21:31:06.144Z] Looking for page with slug "about" in path "about"
+[2025-05-21T21:31:06.170Z] No top-level page found with slug "about"
+[2025-05-21T21:31:06.170Z] No top-level page found with slug: "about" - skipping legacy fallback
+[2025-05-21T21:31:06.171Z] Trying to find page by exact link path: "about"
+[2025-05-21T21:31:06.171Z] Searching for page with normalized path: "about"
+[2025-05-21T21:31:08.887Z] Error in findPageByLink: The page number requested is larger than the number of pages available.
+[2025-05-21T21:31:08.888Z] No page found with slug: about
+[2025-05-21T21:31:08.888Z]   - Skipping menu item "https://www.vancouver.wsu.edu/about-wsu-vancouver" - page not found with slug: about
+[2025-05-21T21:31:08.888Z]   - Creating custom link menu item instead using original URL
+[2025-05-21T21:31:08.915Z]   - Created custom link menu item: https://www.vancouver.wsu.edu/about-wsu-vancouver
+[2025-05-21T21:31:08.915Z]   - Processing 10 child items for "https://www.vancouver.wsu.edu/about-wsu-vancouver"
+[2025-05-21T21:31:08.915Z] Processing menu item from row: (No title in spreadsheet) (1.01)
+[2025-05-21T21:31:08.915Z]   - Original URL: /about/auxiliary-services
+[2025-05-21T21:31:08.915Z]   - Extracted slug: about/auxiliary-services
+[2025-05-21T21:31:08.915Z] Looking for page with slug: about/auxiliary-services
+[2025-05-21T21:31:08.915Z] Using hierarchical lookup for: "about/auxiliary-services"
+[2025-05-21T21:31:08.915Z] Looking for page with slug "auxiliary-services" in path "about/auxiliary-services"
+[2025-05-21T21:31:08.948Z] Found 1 pages with slug "auxiliary-services" but none match the full path "about/auxiliary-services"
+[2025-05-21T21:31:08.948Z] Hierarchical lookup failed for "about/auxiliary-services", trying fallback...
+[2025-05-21T21:31:08.948Z] Looking for page with slug: auxiliary-services
+[2025-05-21T21:31:08.985Z] Found page with ID 7923 and title: Auxiliary services (fallback method)
+[2025-05-21T21:31:08.985Z]   - Found WordPress page ID: 7923, Title: Auxiliary services
+[2025-05-21T21:31:08.985Z]   - Using WordPress page title as menu label: "Auxiliary services"
+[2025-05-21T21:31:09.009Z]   - Created menu item: Auxiliary services, Menu ID: 35, Item ID: 11256
+[2025-05-21T21:31:09.009Z] Processing menu item from row: https://www.vancouver.wsu.edu/event/calendar (1.02)
+[2025-05-21T21:31:09.009Z]   - Original URL: /about/calendar
+[2025-05-21T21:31:09.009Z]   - Extracted slug: about/calendar
+[2025-05-21T21:31:09.009Z] Looking for page with slug: about/calendar
+[2025-05-21T21:31:09.009Z] Using hierarchical lookup for: "about/calendar"
+[2025-05-21T21:31:09.009Z] Looking for page with slug "calendar" in path "about/calendar"
+[2025-05-21T21:31:09.042Z] Found 1 pages with slug "calendar" but none match the full path "about/calendar"
+[2025-05-21T21:31:09.042Z] Hierarchical lookup failed for "about/calendar", trying fallback...
+[2025-05-21T21:31:09.042Z] Looking for page with slug: calendar
+[2025-05-21T21:31:09.076Z] Found page with ID 7926 and title: Event Calendar (fallback method)
+[2025-05-21T21:31:09.076Z]   - Found WordPress page ID: 7926, Title: Event Calendar
+[2025-05-21T21:31:09.076Z]   - Using WordPress page title as menu label: "Event Calendar"
+[2025-05-21T21:31:09.098Z]   - Created menu item: Event Calendar, Menu ID: 35, Item ID: 11257
+[2025-05-21T21:31:09.098Z] Processing menu item from row: https://www.vancouver.wsu.edu/art-campus (1.03)
+[2025-05-21T21:31:09.098Z]   - Original URL: /about/art-campus
+[2025-05-21T21:31:09.098Z]   - Extracted slug: about/art-campus
+[2025-05-21T21:31:09.099Z] Looking for page with slug: about/art-campus
+[2025-05-21T21:31:09.099Z] Using hierarchical lookup for: "about/art-campus"
+[2025-05-21T21:31:09.099Z] Looking for page with slug "art-campus" in path "about/art-campus"
+[2025-05-21T21:31:09.138Z] Found 1 pages with slug "art-campus" but none match the full path "about/art-campus"
+[2025-05-21T21:31:09.138Z] Hierarchical lookup failed for "about/art-campus", trying fallback...
+[2025-05-21T21:31:09.138Z] Looking for page with slug: art-campus
+[2025-05-21T21:31:09.191Z] Found page with ID 7925 and title: Art on campus (fallback method)
+[2025-05-21T21:31:09.191Z]   - Found WordPress page ID: 7925, Title: Art on campus
+[2025-05-21T21:31:09.191Z]   - Using WordPress page title as menu label: "Art on campus"
+[2025-05-21T21:31:09.218Z]   - Created menu item: Art on campus, Menu ID: 35, Item ID: 11258
+[2025-05-21T21:31:09.218Z] Processing menu item from row: https://www.vancouver.wsu.edu/about/history-wsu-vancouver-campus (1.04)
+[2025-05-21T21:31:09.218Z]   - Original URL: /about/history
+[2025-05-21T21:31:09.218Z]   - Extracted slug: about/history
+[2025-05-21T21:31:09.218Z] Looking for page with slug: about/history
+[2025-05-21T21:31:09.218Z] Using hierarchical lookup for: "about/history"
+[2025-05-21T21:31:09.218Z] Looking for page with slug "history" in path "about/history"
+[2025-05-21T21:31:09.267Z] Found 1 pages with slug "history" but none match the full path "about/history"
+[2025-05-21T21:31:09.267Z] Hierarchical lookup failed for "about/history", trying fallback...
+[2025-05-21T21:31:09.267Z] Looking for page with slug: history
+[2025-05-21T21:31:09.306Z] Found page with ID 7934 and title: History of the WSU Vancouver campus (fallback method)
+[2025-05-21T21:31:09.306Z]   - Found WordPress page ID: 7934, Title: History of the WSU Vancouver campus
+[2025-05-21T21:31:09.306Z]   - Using WordPress page title as menu label: "History of the WSU Vancouver campus"
+[2025-05-21T21:31:09.332Z]   - Created menu item: History of the WSU Vancouver campus, Menu ID: 35, Item ID: 11259
+[2025-05-21T21:31:09.332Z] Processing menu item from row: https://www.vancouver.wsu.edu/campus-map-directions (1.05)
+[2025-05-21T21:31:09.333Z]   - Original URL: /about/campus-map-direction
+[2025-05-21T21:31:09.333Z]   - Extracted slug: about/campus-map-direction
+[2025-05-21T21:31:09.333Z] Looking for page with slug: about/campus-map-direction
+[2025-05-21T21:31:09.333Z] Using hierarchical lookup for: "about/campus-map-direction"
+[2025-05-21T21:31:09.333Z] Looking for page with slug "campus-map-direction" in path "about/campus-map-direction"
+[2025-05-21T21:31:09.372Z] Found 1 pages with slug "campus-map-direction" but none match the full path "about/campus-map-direction"
+[2025-05-21T21:31:09.372Z] Hierarchical lookup failed for "about/campus-map-direction", trying fallback...
+[2025-05-21T21:31:09.372Z] Looking for page with slug: campus-map-direction
+[2025-05-21T21:31:09.430Z] Found page with ID 7931 and title: Campus map and directions (fallback method)
+[2025-05-21T21:31:09.430Z]   - Found WordPress page ID: 7931, Title: Campus map and directions
+[2025-05-21T21:31:09.430Z]   - Using WordPress page title as menu label: "Campus map and directions"
+[2025-05-21T21:31:09.455Z]   - Created menu item: Campus map and directions, Menu ID: 35, Item ID: 11260
+[2025-05-21T21:31:09.455Z] Processing menu item from row: (No title in spreadsheet) (1.06)
+[2025-05-21T21:31:09.455Z]   - Original URL: /about/stories
+[2025-05-21T21:31:09.455Z]   - Extracted slug: about/stories
+[2025-05-21T21:31:09.455Z] Looking for page with slug: about/stories
+[2025-05-21T21:31:09.455Z] Using hierarchical lookup for: "about/stories"
+[2025-05-21T21:31:09.455Z] Looking for page with slug "stories" in path "about/stories"
+[2025-05-21T21:31:09.488Z] Found 1 pages with slug "stories" but none match the full path "about/stories"
+[2025-05-21T21:31:09.488Z] Hierarchical lookup failed for "about/stories", trying fallback...
+[2025-05-21T21:31:09.488Z] Looking for page with slug: stories
+[2025-05-21T21:31:09.528Z] Found page with ID 7935 and title: Stories (fallback method)
+[2025-05-21T21:31:09.529Z]   - Found WordPress page ID: 7935, Title: Stories
+[2025-05-21T21:31:09.529Z]   - Using WordPress page title as menu label: "Stories"
+[2025-05-21T21:31:09.552Z]   - Created menu item: Stories, Menu ID: 35, Item ID: 11261
+[2025-05-21T21:31:09.552Z] Processing menu item from row: (No title in spreadsheet) (1.07)
+[2025-05-21T21:31:09.553Z]   - Original URL: /about/community
+[2025-05-21T21:31:09.553Z]   - Extracted slug: about/community
+[2025-05-21T21:31:09.553Z] Looking for page with slug: about/community
+[2025-05-21T21:31:09.553Z] Using hierarchical lookup for: "about/community"
+[2025-05-21T21:31:09.553Z] Looking for page with slug "community" in path "about/community"
+[2025-05-21T21:31:09.585Z] Found 1 pages with slug "community" but none match the full path "about/community"
+[2025-05-21T21:31:09.585Z] Hierarchical lookup failed for "about/community", trying fallback...
+[2025-05-21T21:31:09.585Z] Looking for page with slug: community
+[2025-05-21T21:31:09.618Z] Found page with ID 7927 and title: Community (fallback method)
+[2025-05-21T21:31:09.618Z]   - Found WordPress page ID: 7927, Title: Community
+[2025-05-21T21:31:09.618Z]   - Using WordPress page title as menu label: "Community"
+[2025-05-21T21:31:09.642Z]   - Created menu item: Community, Menu ID: 35, Item ID: 11262
+[2025-05-21T21:31:09.642Z] Processing menu item from row: (No title in spreadsheet) (1.07)
+[2025-05-21T21:31:09.642Z]   - Original URL: /about/titan-vancoug-corpse-flower
+[2025-05-21T21:31:09.642Z]   - Extracted slug: about/titan-vancoug-corpse-flower
+[2025-05-21T21:31:09.642Z] Looking for page with slug: about/titan-vancoug-corpse-flower
+[2025-05-21T21:31:09.642Z] Using hierarchical lookup for: "about/titan-vancoug-corpse-flower"
+[2025-05-21T21:31:09.642Z] Looking for page with slug "titan-vancoug-corpse-flower" in path "about/titan-vancoug-corpse-flower"
+[2025-05-21T21:31:09.675Z] Found 1 pages with slug "titan-vancoug-corpse-flower" but none match the full path "about/titan-vancoug-corpse-flower"
+[2025-05-21T21:31:09.675Z] Hierarchical lookup failed for "about/titan-vancoug-corpse-flower", trying fallback...
+[2025-05-21T21:31:09.675Z] Looking for page with slug: titan-vancoug-corpse-flower
+[2025-05-21T21:31:09.707Z] Found page with ID 7936 and title: Titan vancoug corpse flower (fallback method)
+[2025-05-21T21:31:09.707Z]   - Found WordPress page ID: 7936, Title: Titan vancoug corpse flower
+[2025-05-21T21:31:09.707Z]   - Using WordPress page title as menu label: "Titan vancoug corpse flower"
+[2025-05-21T21:31:09.731Z]   - Created menu item: Titan vancoug corpse flower, Menu ID: 35, Item ID: 11263
+[2025-05-21T21:31:09.732Z] Processing menu item from row: (No title in spreadsheet) (1.08)
+[2025-05-21T21:31:09.732Z]   - Original URL: /about/departments
+[2025-05-21T21:31:09.732Z]   - Extracted slug: about/departments
+[2025-05-21T21:31:09.732Z] Looking for page with slug: about/departments
+[2025-05-21T21:31:09.732Z] Using hierarchical lookup for: "about/departments"
+[2025-05-21T21:31:09.732Z] Looking for page with slug "departments" in path "about/departments"
+[2025-05-21T21:31:09.765Z] Found 1 pages with slug "departments" but none match the full path "about/departments"
+[2025-05-21T21:31:09.765Z] Hierarchical lookup failed for "about/departments", trying fallback...
+[2025-05-21T21:31:09.765Z] Looking for page with slug: departments
+[2025-05-21T21:31:09.800Z] Found page with ID 7929 and title: Departments (fallback method)
+[2025-05-21T21:31:09.800Z]   - Found WordPress page ID: 7929, Title: Departments
+[2025-05-21T21:31:09.800Z]   - Using WordPress page title as menu label: "Departments"
+[2025-05-21T21:31:09.826Z]   - Created menu item: Departments, Menu ID: 35, Item ID: 11264
+[2025-05-21T21:31:09.827Z] Processing menu item from row: (No title in spreadsheet) (1.09)
+[2025-05-21T21:31:09.827Z]   - Original URL: /about/governance
+[2025-05-21T21:31:09.827Z]   - Extracted slug: about/governance
+[2025-05-21T21:31:09.827Z] Looking for page with slug: about/governance
+[2025-05-21T21:31:09.827Z] Using hierarchical lookup for: "about/governance"
+[2025-05-21T21:31:09.827Z] Looking for page with slug "governance" in path "about/governance"
+[2025-05-21T21:31:09.863Z] Found 1 pages with slug "governance" but none match the full path "about/governance"
+[2025-05-21T21:31:09.864Z] Hierarchical lookup failed for "about/governance", trying fallback...
+[2025-05-21T21:31:09.865Z] Looking for page with slug: governance
+[2025-05-21T21:31:09.900Z] Found page with ID 7930 and title: Governance (fallback method)
+[2025-05-21T21:31:09.901Z]   - Found WordPress page ID: 7930, Title: Governance
+[2025-05-21T21:31:09.901Z]   - Using WordPress page title as menu label: "Governance"
+[2025-05-21T21:31:09.926Z]   - Created menu item: Governance, Menu ID: 35, Item ID: 11265
+[2025-05-21T21:31:09.927Z] Processing menu item from row: (No title in spreadsheet) (2)
+[2025-05-21T21:31:09.927Z]   - Original URL: /academics
+[2025-05-21T21:31:09.927Z]   - Extracted slug: academics
+[2025-05-21T21:31:09.928Z] Looking for page with slug: academics
+[2025-05-21T21:31:09.928Z] Looking for top-level page with slug: "academics"
+[2025-05-21T21:31:09.945Z] Found top-level page with ID 7849, title "Academics"
+[2025-05-21T21:31:09.945Z]   - Found WordPress page ID: 7849, Title: Academics
+[2025-05-21T21:31:09.945Z]   - Using WordPress page title as menu label: "Academics"
+[2025-05-21T21:31:09.969Z]   - Created menu item: Academics, Menu ID: 35, Item ID: 11266
+[2025-05-21T21:31:09.970Z]   - Processing 6 child items for "(No title in spreadsheet)"
+[2025-05-21T21:31:09.970Z] Processing menu item from row: (No title in spreadsheet) (2.01)
+[2025-05-21T21:31:09.970Z]   - Original URL: /academics/academic-services
+[2025-05-21T21:31:09.970Z]   - Extracted slug: academics/academic-services
+[2025-05-21T21:31:09.971Z] Looking for page with slug: academics/academic-services
+[2025-05-21T21:31:09.971Z] Using hierarchical lookup for: "academics/academic-services"
+[2025-05-21T21:31:09.971Z] Looking for page with slug "academic-services" in path "academics/academic-services"
+[2025-05-21T21:31:10.003Z] Found matching page with ID 7937, title "Academic services" at path: academics/academic-services
+[2025-05-21T21:31:10.004Z] Found page with ID 7937, title "Academic services" using hierarchical lookup
+[2025-05-21T21:31:10.008Z]   - Found WordPress page ID: 7937, Title: Academic services
+[2025-05-21T21:31:10.008Z]   - Using WordPress page title as menu label: "Academic services"
+[2025-05-21T21:31:10.032Z]   - Created menu item: Academic services, Menu ID: 35, Item ID: 11267
+[2025-05-21T21:31:10.032Z] Processing menu item from row: (No title in spreadsheet) (2.03)
+[2025-05-21T21:31:10.032Z]   - Original URL: /academics/assessments
+[2025-05-21T21:31:10.032Z]   - Extracted slug: academics/assessments
+[2025-05-21T21:31:10.032Z] Looking for page with slug: academics/assessments
+[2025-05-21T21:31:10.032Z] Using hierarchical lookup for: "academics/assessments"
+[2025-05-21T21:31:10.032Z] Looking for page with slug "assessments" in path "academics/assessments"
+[2025-05-21T21:31:10.066Z] Found matching page with ID 7938, title "Assessments" at path: academics/assessments
+[2025-05-21T21:31:10.067Z] Found page with ID 7938, title "Assessments" using hierarchical lookup
+[2025-05-21T21:31:10.067Z]   - Found WordPress page ID: 7938, Title: Assessments
+[2025-05-21T21:31:10.067Z]   - Using WordPress page title as menu label: "Assessments"
+[2025-05-21T21:31:10.091Z]   - Created menu item: Assessments, Menu ID: 35, Item ID: 11268
+[2025-05-21T21:31:10.092Z] Processing menu item from row: https://studentaffairs.vancouver.wsu.edu/registrars-office/course-catalog (2.04)
+[2025-05-21T21:31:10.092Z]   - Original URL: /academics/course-catalog
+[2025-05-21T21:31:10.092Z]   - Extracted slug: academics/course-catalog
+[2025-05-21T21:31:10.092Z] Looking for page with slug: academics/course-catalog
+[2025-05-21T21:31:10.092Z] Using hierarchical lookup for: "academics/course-catalog"
+[2025-05-21T21:31:10.092Z] Looking for page with slug "course-catalog" in path "academics/course-catalog"
+[2025-05-21T21:31:10.127Z] Found matching page with ID 7945, title "Calendars, catalogs and schedules" at path: academics/course-catalog
+[2025-05-21T21:31:10.128Z] Found page with ID 7945, title "Calendars, catalogs and schedules" using hierarchical lookup
+[2025-05-21T21:31:10.129Z]   - Found WordPress page ID: 7945, Title: Calendars, catalogs and schedules
+[2025-05-21T21:31:10.129Z]   - Using WordPress page title as menu label: "Calendars, catalogs and schedules"
+[2025-05-21T21:31:10.158Z]   - Created menu item: Calendars, catalogs and schedules, Menu ID: 35, Item ID: 11269
+[2025-05-21T21:31:10.159Z] Processing menu item from row: https://studentaffairs.vancouver.wsu.edu/admissions/degrees-majors-programs (2.05)
+[2025-05-21T21:31:10.159Z]   - Original URL: /academics/degrees-majors-programs
+[2025-05-21T21:31:10.159Z]   - Extracted slug: academics/degrees-majors-programs
+[2025-05-21T21:31:10.159Z] Looking for page with slug: academics/degrees-majors-programs
+[2025-05-21T21:31:10.160Z] Using hierarchical lookup for: "academics/degrees-majors-programs"
+[2025-05-21T21:31:10.160Z] Looking for page with slug "degrees-majors-programs" in path "academics/degrees-majors-programs"
+[2025-05-21T21:31:10.197Z] Found matching page with ID 7948, title "Degrees, majors and programs" at path: academics/degrees-majors-programs
+[2025-05-21T21:31:10.198Z] Found page with ID 7948, title "Degrees, majors and programs" using hierarchical lookup
+[2025-05-21T21:31:10.198Z]   - Found WordPress page ID: 7948, Title: Degrees, majors and programs
+[2025-05-21T21:31:10.199Z]   - Using WordPress page title as menu label: "Degrees, majors and programs"
+[2025-05-21T21:31:10.222Z]   - Created menu item: Degrees, majors and programs, Menu ID: 35, Item ID: 11270
+[2025-05-21T21:31:10.223Z] Processing menu item from row: (No title in spreadsheet) (2.06)
+[2025-05-21T21:31:10.223Z]   - Original URL: /academics/learning-support
+[2025-05-21T21:31:10.223Z]   - Extracted slug: academics/learning-support
+[2025-05-21T21:31:10.223Z] Looking for page with slug: academics/learning-support
+[2025-05-21T21:31:10.224Z] Using hierarchical lookup for: "academics/learning-support"
+[2025-05-21T21:31:10.225Z] Looking for page with slug "learning-support" in path "academics/learning-support"
+[2025-05-21T21:31:10.260Z] Found matching page with ID 7952, title "Library and Learning Resources" at path: academics/learning-support
+[2025-05-21T21:31:10.262Z] Found page with ID 7952, title "Library and Learning Resources" using hierarchical lookup
+[2025-05-21T21:31:10.262Z]   - Found WordPress page ID: 7952, Title: Library and Learning Resources
+[2025-05-21T21:31:10.262Z]   - Using WordPress page title as menu label: "Library and Learning Resources"
+[2025-05-21T21:31:10.285Z]   - Created menu item: Library and Learning Resources, Menu ID: 35, Item ID: 11271
+[2025-05-21T21:31:10.286Z] Processing menu item from row: https://library.vancouver.wsu.edu/about-library (2.07)
+[2025-05-21T21:31:10.286Z]   - Original URL: /academics/library/about
+[2025-05-21T21:31:10.287Z]   - Extracted slug: academics/library/about
+[2025-05-21T21:31:10.287Z] Looking for page with slug: academics/library/about
+[2025-05-21T21:31:10.287Z] Using hierarchical lookup for: "academics/library/about"
+[2025-05-21T21:31:10.287Z] Looking for page with slug "about" in path "academics/library/about"
+[2025-05-21T21:31:10.343Z] Found matching page with ID 11062, title "About the library" at path: academics/library/about
+[2025-05-21T21:31:10.343Z] Found page with ID 11062, title "About the library" using hierarchical lookup
+[2025-05-21T21:31:10.344Z]   - Found WordPress page ID: 11062, Title: About the library
+[2025-05-21T21:31:10.344Z]   - Using WordPress page title as menu label: "About the library"
+[2025-05-21T21:31:10.372Z]   - Created menu item: About the library, Menu ID: 35, Item ID: 11272
+[2025-05-21T21:31:10.373Z] Processing menu item from row: https://studentaffairs.vancouver.wsu.edu/admissions (3)
+[2025-05-21T21:31:10.373Z]   - Original URL: /admission
+[2025-05-21T21:31:10.373Z]   - Extracted slug: admission
+[2025-05-21T21:31:10.374Z] Looking for page with slug: admission
+[2025-05-21T21:31:10.374Z] Looking for top-level page with slug: "admission"
+[2025-05-21T21:31:10.395Z] Found top-level page with ID 7867, title "Office of Admissions"
+[2025-05-21T21:31:10.395Z]   - Found WordPress page ID: 7867, Title: Office of Admissions
+[2025-05-21T21:31:10.395Z]   - Using WordPress page title as menu label: "Office of Admissions"
+[2025-05-21T21:31:10.420Z]   - Created menu item: Office of Admissions, Menu ID: 35, Item ID: 11273
+[2025-05-21T21:31:10.421Z]   - Processing 9 child items for "https://studentaffairs.vancouver.wsu.edu/admissions"
+[2025-05-21T21:31:10.421Z] Processing menu item from row: https://studentaffairs.vancouver.wsu.edu/admissions/admission-requirements (3.01)
+[2025-05-21T21:31:10.421Z]   - Original URL: /admission/admission-requirements
+[2025-05-21T21:31:10.421Z]   - Extracted slug: admission/admission-requirements
+[2025-05-21T21:31:10.423Z] Looking for page with slug: admission/admission-requirements
+[2025-05-21T21:31:10.423Z] Using hierarchical lookup for: "admission/admission-requirements"
+[2025-05-21T21:31:10.423Z] Looking for page with slug "admission-requirements" in path "admission/admission-requirements"
+[2025-05-21T21:31:10.465Z] Found matching page with ID 7965, title "Admission requirements" at path: admission/admission-requirements
+[2025-05-21T21:31:10.465Z] Found page with ID 7965, title "Admission requirements" using hierarchical lookup
+[2025-05-21T21:31:10.466Z]   - Found WordPress page ID: 7965, Title: Admission requirements
+[2025-05-21T21:31:10.466Z]   - Using WordPress page title as menu label: "Admission requirements"
+[2025-05-21T21:31:10.492Z]   - Created menu item: Admission requirements, Menu ID: 35, Item ID: 11274
+[2025-05-21T21:31:10.492Z] Processing menu item from row: (No title in spreadsheet) (3.01)
+[2025-05-21T21:31:10.494Z]   - Original URL: /admission/application-process
+[2025-05-21T21:31:10.494Z]   - Extracted slug: admission/application-process
+[2025-05-21T21:31:10.494Z] Looking for page with slug: admission/application-process
+[2025-05-21T21:31:10.494Z] Using hierarchical lookup for: "admission/application-process"
+[2025-05-21T21:31:10.494Z] Looking for page with slug "application-process" in path "admission/application-process"
+[2025-05-21T21:31:10.540Z] Found matching page with ID 7962, title "Application process" at path: admission/application-process
+[2025-05-21T21:31:10.542Z] Found page with ID 7962, title "Application process" using hierarchical lookup
+[2025-05-21T21:31:10.543Z]   - Found WordPress page ID: 7962, Title: Application process
+[2025-05-21T21:31:10.543Z]   - Using WordPress page title as menu label: "Application process"
+[2025-05-21T21:31:10.570Z]   - Created menu item: Application process, Menu ID: 35, Item ID: 11275
+[2025-05-21T21:31:10.571Z] Processing menu item from row: (No title in spreadsheet) (3.02)
+[2025-05-21T21:31:10.571Z]   - Original URL: /admission/community-college-transfer-pathways
+[2025-05-21T21:31:10.571Z]   - Extracted slug: admission/community-college-transfer-pathways
+[2025-05-21T21:31:10.572Z] Looking for page with slug: admission/community-college-transfer-pathways
+[2025-05-21T21:31:10.572Z] Using hierarchical lookup for: "admission/community-college-transfer-pathways"
+[2025-05-21T21:31:10.572Z] Looking for page with slug "community-college-transfer-pathways" in path "admission/community-college-transfer-pathways"
+[2025-05-21T21:31:10.614Z] Found matching page with ID 7966, title "Community college transfer pathways" at path: admission/community-college-transfer-pathways
+[2025-05-21T21:31:10.614Z] Found page with ID 7966, title "Community college transfer pathways" using hierarchical lookup
+[2025-05-21T21:31:10.615Z]   - Found WordPress page ID: 7966, Title: Community college transfer pathways
+[2025-05-21T21:31:10.615Z]   - Using WordPress page title as menu label: "Community college transfer pathways"
+[2025-05-21T21:31:10.642Z]   - Created menu item: Community college transfer pathways, Menu ID: 35, Item ID: 11276
+[2025-05-21T21:31:10.642Z] Processing menu item from row: https://studentaffairs.vancouver.wsu.edu/admissions/financial-aid (3.03)
+[2025-05-21T21:31:10.642Z]   - Original URL: /admission/financial-aid
+[2025-05-21T21:31:10.642Z]   - Extracted slug: admission/financial-aid
+[2025-05-21T21:31:10.642Z] Looking for page with slug: admission/financial-aid
+[2025-05-21T21:31:10.642Z] Using hierarchical lookup for: "admission/financial-aid"
+[2025-05-21T21:31:10.642Z] Looking for page with slug "financial-aid" in path "admission/financial-aid"
+[2025-05-21T21:31:10.683Z] Found matching page with ID 7971, title "Financial aid" at path: admission/financial-aid
+[2025-05-21T21:31:10.683Z] Found page with ID 7971, title "Financial aid" using hierarchical lookup
+[2025-05-21T21:31:10.684Z]   - Found WordPress page ID: 7971, Title: Financial aid
+[2025-05-21T21:31:10.684Z]   - Using WordPress page title as menu label: "Financial aid"
+[2025-05-21T21:31:10.706Z]   - Created menu item: Financial aid, Menu ID: 35, Item ID: 11277
+[2025-05-21T21:31:10.707Z] Processing menu item from row: https://studentaffairs.vancouver.wsu.edu/admissions/international-student-information (3.04)
+[2025-05-21T21:31:10.707Z]   - Original URL: /admission/international-students
+[2025-05-21T21:31:10.707Z]   - Extracted slug: admission/international-students
+[2025-05-21T21:31:10.708Z] Looking for page with slug: admission/international-students
+[2025-05-21T21:31:10.714Z] Using hierarchical lookup for: "admission/international-students"
+[2025-05-21T21:31:10.714Z] Looking for page with slug "international-students" in path "admission/international-students"
+[2025-05-21T21:31:10.756Z] Found matching page with ID 7974, title "International student information" at path: admission/international-students
+[2025-05-21T21:31:10.757Z] Found page with ID 7974, title "International student information" using hierarchical lookup
+[2025-05-21T21:31:10.758Z]   - Found WordPress page ID: 7974, Title: International student information
+[2025-05-21T21:31:10.761Z]   - Using WordPress page title as menu label: "International student information"
+[2025-05-21T21:31:10.785Z]   - Created menu item: International student information, Menu ID: 35, Item ID: 11278
+[2025-05-21T21:31:10.786Z] Processing menu item from row: https://studentaffairs.vancouver.wsu.edu/mywsuinfo (3.05)
+[2025-05-21T21:31:10.786Z]   - Original URL: /admission/mywsu-Information
+[2025-05-21T21:31:10.786Z]   - Extracted slug: admission/mywsu-Information
+[2025-05-21T21:31:10.786Z] Looking for page with slug: admission/mywsu-Information
+[2025-05-21T21:31:10.786Z] Using hierarchical lookup for: "admission/mywsu-Information"
+[2025-05-21T21:31:10.787Z] Looking for page with slug "mywsu-Information" in path "admission/mywsu-Information"
+[2025-05-21T21:31:10.828Z] Found matching page with ID 7976, title "myWSU info" at path: admission/mywsu-Information
+[2025-05-21T21:31:10.829Z] Found page with ID 7976, title "myWSU info" using hierarchical lookup
+[2025-05-21T21:31:10.829Z]   - Found WordPress page ID: 7976, Title: myWSU info
+[2025-05-21T21:31:10.829Z]   - Using WordPress page title as menu label: "myWSU info"
+[2025-05-21T21:31:10.857Z]   - Created menu item: myWSU info, Menu ID: 35, Item ID: 11279
+[2025-05-21T21:31:10.857Z] Processing menu item from row: (No title in spreadsheet) (3.06)
+[2025-05-21T21:31:10.857Z]   - Original URL: /admission/new-student-resources
+[2025-05-21T21:31:10.857Z]   - Extracted slug: admission/new-student-resources
+[2025-05-21T21:31:10.857Z] Looking for page with slug: admission/new-student-resources
+[2025-05-21T21:31:10.857Z] Using hierarchical lookup for: "admission/new-student-resources"
+[2025-05-21T21:31:10.857Z] Looking for page with slug "new-student-resources" in path "admission/new-student-resources"
+[2025-05-21T21:31:10.900Z] Found matching page with ID 7977, title "New student resources" at path: admission/new-student-resources
+[2025-05-21T21:31:10.901Z] Found page with ID 7977, title "New student resources" using hierarchical lookup
+[2025-05-21T21:31:10.901Z]   - Found WordPress page ID: 7977, Title: New student resources
+[2025-05-21T21:31:10.901Z]   - Using WordPress page title as menu label: "New student resources"
+[2025-05-21T21:31:10.931Z]   - Created menu item: New student resources, Menu ID: 35, Item ID: 11280
+[2025-05-21T21:31:10.931Z] Processing menu item from row: (No title in spreadsheet) (3.07)
+[2025-05-21T21:31:10.931Z]   - Original URL: /admission/registration-records
+[2025-05-21T21:31:10.931Z]   - Extracted slug: admission/registration-records
+[2025-05-21T21:31:10.931Z] Looking for page with slug: admission/registration-records
+[2025-05-21T21:31:10.931Z] Using hierarchical lookup for: "admission/registration-records"
+[2025-05-21T21:31:10.931Z] Looking for page with slug "registration-records" in path "admission/registration-records"
+[2025-05-21T21:31:10.975Z] Found matching page with ID 7978, title "Registration records" at path: admission/registration-records
+[2025-05-21T21:31:10.975Z] Found page with ID 7978, title "Registration records" using hierarchical lookup
+[2025-05-21T21:31:10.975Z]   - Found WordPress page ID: 7978, Title: Registration records
+[2025-05-21T21:31:10.975Z]   - Using WordPress page title as menu label: "Registration records"
+[2025-05-21T21:31:11.002Z]   - Created menu item: Registration records, Menu ID: 35, Item ID: 11281
+[2025-05-21T21:31:11.003Z] Processing menu item from row: (No title in spreadsheet) (3.08)
+[2025-05-21T21:31:11.003Z]   - Original URL: /admission/visit-connect
+[2025-05-21T21:31:11.003Z]   - Extracted slug: admission/visit-connect
+[2025-05-21T21:31:11.003Z] Looking for page with slug: admission/visit-connect
+[2025-05-21T21:31:11.003Z] Using hierarchical lookup for: "admission/visit-connect"
+[2025-05-21T21:31:11.003Z] Looking for page with slug "visit-connect" in path "admission/visit-connect"
+[2025-05-21T21:31:11.051Z] Found matching page with ID 7979, title "Visit connect" at path: admission/visit-connect
+[2025-05-21T21:31:11.052Z] Found page with ID 7979, title "Visit connect" using hierarchical lookup
+[2025-05-21T21:31:11.052Z]   - Found WordPress page ID: 7979, Title: Visit connect
+[2025-05-21T21:31:11.052Z]   - Using WordPress page title as menu label: "Visit connect"
+[2025-05-21T21:31:11.084Z]   - Created menu item: Visit connect, Menu ID: 35, Item ID: 11282
+[2025-05-21T21:31:11.085Z] Processing menu item from row: https://www.vancouver.wsu.edu/alumni (4)
+[2025-05-21T21:31:11.085Z]   - Original URL: /give
+[2025-05-21T21:31:11.085Z]   - Extracted slug: give
+[2025-05-21T21:31:11.087Z] Looking for page with slug: give
+[2025-05-21T21:31:11.087Z] Looking for top-level page with slug: "give"
+[2025-05-21T21:31:11.125Z] Found top-level page with ID 7869, title "Development and Alumni Relations"
+[2025-05-21T21:31:11.125Z]   - Found WordPress page ID: 7869, Title: Development and Alumni Relations
+[2025-05-21T21:31:11.125Z]   - Using WordPress page title as menu label: "Development and Alumni Relations"
+[2025-05-21T21:31:11.153Z]   - Created menu item: Development and Alumni Relations, Menu ID: 35, Item ID: 11283
+[2025-05-21T21:31:11.153Z]   - Processing 3 child items for "https://www.vancouver.wsu.edu/alumni"
+[2025-05-21T21:31:11.153Z] Processing menu item from row: https://www.vancouver.wsu.edu/development-alumni-relations/alumni-relations (4.01)
+[2025-05-21T21:31:11.153Z]   - Original URL: /about/departments/alumni/alumni-relations
+[2025-05-21T21:31:11.153Z]   - Extracted slug: about/departments/alumni/alumni-relations
+[2025-05-21T21:31:11.153Z] Looking for page with slug: about/departments/alumni/alumni-relations
+[2025-05-21T21:31:11.153Z] Using hierarchical lookup for: "about/departments/alumni/alumni-relations"
+[2025-05-21T21:31:11.153Z] Looking for page with slug "alumni-relations" in path "about/departments/alumni/alumni-relations"
+[2025-05-21T21:31:11.235Z] Found 1 pages with slug "alumni-relations" but none match the full path "about/departments/alumni/alumni-relations"
+[2025-05-21T21:31:11.235Z] Hierarchical lookup failed for "about/departments/alumni/alumni-relations", trying fallback...
+[2025-05-21T21:31:11.236Z] Looking for page with slug: alumni-relations
+[2025-05-21T21:31:11.295Z] Found page with ID 8531 and title: Alumni relations (fallback method)
+[2025-05-21T21:31:11.296Z]   - Found WordPress page ID: 8531, Title: Alumni relations
+[2025-05-21T21:31:11.296Z]   - Using WordPress page title as menu label: "Alumni relations"
+[2025-05-21T21:31:11.325Z]   - Created menu item: Alumni relations, Menu ID: 35, Item ID: 11284
+[2025-05-21T21:31:11.326Z] Processing menu item from row: https://www.vancouver.wsu.edu/development-alumni-relations/giving (4.02)
+[2025-05-21T21:31:11.326Z]   - Original URL: /about/departments/alumni/giving
+[2025-05-21T21:31:11.326Z]   - Extracted slug: about/departments/alumni/giving
+[2025-05-21T21:31:11.326Z] Looking for page with slug: about/departments/alumni/giving
+[2025-05-21T21:31:11.326Z] Using hierarchical lookup for: "about/departments/alumni/giving"
+[2025-05-21T21:31:11.327Z] Looking for page with slug "giving" in path "about/departments/alumni/giving"
+[2025-05-21T21:31:11.413Z] Found 1 pages with slug "giving" but none match the full path "about/departments/alumni/giving"
+[2025-05-21T21:31:11.413Z] Hierarchical lookup failed for "about/departments/alumni/giving", trying fallback...
+[2025-05-21T21:31:11.413Z] Looking for page with slug: giving
+[2025-05-21T21:31:11.451Z] Found page with ID 8533 and title: Giving (fallback method)
+[2025-05-21T21:31:11.451Z]   - Found WordPress page ID: 8533, Title: Giving
+[2025-05-21T21:31:11.451Z]   - Using WordPress page title as menu label: "Giving"
+[2025-05-21T21:31:11.477Z]   - Created menu item: Giving, Menu ID: 35, Item ID: 11285
+[2025-05-21T21:31:11.477Z] Processing menu item from row: https://www.vancouver.wsu.edu/development-alumni-relations/meet-staff (4.03)
+[2025-05-21T21:31:11.477Z]   - Original URL: /about/departments/alumni/meet-the-staff
+[2025-05-21T21:31:11.477Z]   - Extracted slug: about/departments/alumni/meet-the-staff
+[2025-05-21T21:31:11.478Z] Looking for page with slug: about/departments/alumni/meet-the-staff
+[2025-05-21T21:31:11.478Z] Using hierarchical lookup for: "about/departments/alumni/meet-the-staff"
+[2025-05-21T21:31:11.478Z] Looking for page with slug "meet-the-staff" in path "about/departments/alumni/meet-the-staff"
+[2025-05-21T21:31:11.519Z] Found 1 pages with slug "meet-the-staff" but none match the full path "about/departments/alumni/meet-the-staff"
+[2025-05-21T21:31:11.520Z] Hierarchical lookup failed for "about/departments/alumni/meet-the-staff", trying fallback...
+[2025-05-21T21:31:11.520Z] Looking for page with slug: meet-the-staff
+[2025-05-21T21:31:11.576Z] Found page with ID 8526 and title: Meet the staff (fallback method)
+[2025-05-21T21:31:11.576Z]   - Found WordPress page ID: 8526, Title: Meet the staff
+[2025-05-21T21:31:11.576Z]   - Using WordPress page title as menu label: "Meet the staff"
+[2025-05-21T21:31:11.600Z]   - Created menu item: Meet the staff, Menu ID: 35, Item ID: 11286
+[2025-05-21T21:31:11.601Z] Processing menu item from row: (No title in spreadsheet) (5)
+[2025-05-21T21:31:11.601Z]   - Original URL: /research
+[2025-05-21T21:31:11.602Z]   - Extracted slug: research
+[2025-05-21T21:31:11.602Z] Looking for page with slug: research
+[2025-05-21T21:31:11.602Z] Looking for top-level page with slug: "research"
+[2025-05-21T21:31:11.621Z] Found top-level page with ID 7909, title "Research"
+[2025-05-21T21:31:11.622Z]   - Found WordPress page ID: 7909, Title: Research
+[2025-05-21T21:31:11.622Z]   - Using WordPress page title as menu label: "Research"
+[2025-05-21T21:31:11.655Z]   - Created menu item: Research, Menu ID: 35, Item ID: 11287
+[2025-05-21T21:31:11.656Z]   - Processing 2 child items for "(No title in spreadsheet)"
+[2025-05-21T21:31:11.656Z] Processing menu item from row: (No title in spreadsheet) (5.01)
+[2025-05-21T21:31:11.656Z]   - Original URL: /research/research-graduate-education
+[2025-05-21T21:31:11.657Z]   - Extracted slug: research/research-graduate-education
+[2025-05-21T21:31:11.657Z] Looking for page with slug: research/research-graduate-education
+[2025-05-21T21:31:11.657Z] Using hierarchical lookup for: "research/research-graduate-education"
+[2025-05-21T21:31:11.657Z] Looking for page with slug "research-graduate-education" in path "research/research-graduate-education"
+[2025-05-21T21:31:11.691Z] Found matching page with ID 8002, title "Research graduate education" at path: research/research-graduate-education
+[2025-05-21T21:31:11.692Z] Found page with ID 8002, title "Research graduate education" using hierarchical lookup
+[2025-05-21T21:31:11.692Z]   - Found WordPress page ID: 8002, Title: Research graduate education
+[2025-05-21T21:31:11.692Z]   - Using WordPress page title as menu label: "Research graduate education"
+[2025-05-21T21:31:11.722Z]   - Created menu item: Research graduate education, Menu ID: 35, Item ID: 11288
+[2025-05-21T21:31:11.722Z] Processing menu item from row: https://www.vancouver.wsu.edu/research-showcase (5.02)
+[2025-05-21T21:31:11.722Z]   - Original URL: /research/research-showcase
+[2025-05-21T21:31:11.722Z]   - Extracted slug: research/research-showcase
+[2025-05-21T21:31:11.723Z] Looking for page with slug: research/research-showcase
+[2025-05-21T21:31:11.723Z] Using hierarchical lookup for: "research/research-showcase"
+[2025-05-21T21:31:11.723Z] Looking for page with slug "research-showcase" in path "research/research-showcase"
+[2025-05-21T21:31:11.758Z] Found matching page with ID 8006, title "Research Showcase" at path: research/research-showcase
+[2025-05-21T21:31:11.759Z] Found page with ID 8006, title "Research Showcase" using hierarchical lookup
+[2025-05-21T21:31:11.759Z]   - Found WordPress page ID: 8006, Title: Research Showcase
+[2025-05-21T21:31:11.759Z]   - Using WordPress page title as menu label: "Research Showcase"
+[2025-05-21T21:31:11.782Z]   - Created menu item: Research Showcase, Menu ID: 35, Item ID: 11289
+[2025-05-21T21:31:11.783Z] Processing menu item from row: https://studentaffairs.vancouver.wsu.edu/current-student-resources (6)
+[2025-05-21T21:31:11.783Z]   - Original URL: /student-life-and-support
+[2025-05-21T21:31:11.785Z]   - Extracted slug: student-life-and-support
+[2025-05-21T21:31:11.786Z] Looking for page with slug: student-life-and-support
+[2025-05-21T21:31:11.786Z] Looking for top-level page with slug: "student-life-and-support"
+[2025-05-21T21:31:11.806Z] Found top-level page with ID 7917, title "Current student resources"
+[2025-05-21T21:31:11.806Z]   - Found WordPress page ID: 7917, Title: Current student resources
+[2025-05-21T21:31:11.806Z]   - Using WordPress page title as menu label: "Current student resources"
+[2025-05-21T21:31:11.842Z]   - Created menu item: Current student resources, Menu ID: 35, Item ID: 11290
+[2025-05-21T21:31:11.843Z]   - Processing 12 child items for "https://studentaffairs.vancouver.wsu.edu/current-student-resources"
+[2025-05-21T21:31:11.843Z] Processing menu item from row: https://studentaffairs.vancouver.wsu.edu/access-center (6.01)
+[2025-05-21T21:31:11.843Z]   - Original URL: /student-life-and-support/access-center
+[2025-05-21T21:31:11.843Z]   - Extracted slug: student-life-and-support/access-center
+[2025-05-21T21:31:11.843Z] Looking for page with slug: student-life-and-support/access-center
+[2025-05-21T21:31:11.843Z] Using hierarchical lookup for: "student-life-and-support/access-center"
+[2025-05-21T21:31:11.843Z] Looking for page with slug "access-center" in path "student-life-and-support/access-center"
+[2025-05-21T21:31:11.890Z] Found matching page with ID 8014, title "Access Center" at path: student-life-and-support/access-center
+[2025-05-21T21:31:11.892Z] Found page with ID 8014, title "Access Center" using hierarchical lookup
+[2025-05-21T21:31:11.893Z]   - Found WordPress page ID: 8014, Title: Access Center
+[2025-05-21T21:31:11.893Z]   - Using WordPress page title as menu label: "Access Center"
+[2025-05-21T21:31:11.915Z]   - Created menu item: Access Center, Menu ID: 35, Item ID: 11291
+[2025-05-21T21:31:11.915Z] Processing menu item from row: (No title in spreadsheet) (6.02)
+[2025-05-21T21:31:11.916Z]   - Original URL: /student-life-and-support/basic-needs
+[2025-05-21T21:31:11.916Z]   - Extracted slug: student-life-and-support/basic-needs
+[2025-05-21T21:31:11.916Z] Looking for page with slug: student-life-and-support/basic-needs
+[2025-05-21T21:31:11.916Z] Using hierarchical lookup for: "student-life-and-support/basic-needs"
+[2025-05-21T21:31:11.916Z] Looking for page with slug "basic-needs" in path "student-life-and-support/basic-needs"
+[2025-05-21T21:31:11.953Z] Found matching page with ID 8007, title "Basic needs" at path: student-life-and-support/basic-needs
+[2025-05-21T21:31:11.954Z] Found page with ID 8007, title "Basic needs" using hierarchical lookup
+[2025-05-21T21:31:11.954Z]   - Found WordPress page ID: 8007, Title: Basic needs
+[2025-05-21T21:31:11.954Z]   - Using WordPress page title as menu label: "Basic needs"
+[2025-05-21T21:31:11.979Z]   - Created menu item: Basic needs, Menu ID: 35, Item ID: 11292
+[2025-05-21T21:31:11.979Z] Processing menu item from row: https://studentaffairs.vancouver.wsu.edu/career-services (6.03)
+[2025-05-21T21:31:11.979Z]   - Original URL: /student-life-and-support/career-services
+[2025-05-21T21:31:11.979Z]   - Extracted slug: student-life-and-support/career-services
+[2025-05-21T21:31:11.979Z] Looking for page with slug: student-life-and-support/career-services
+[2025-05-21T21:31:11.980Z] Using hierarchical lookup for: "student-life-and-support/career-services"
+[2025-05-21T21:31:11.980Z] Looking for page with slug "career-services" in path "student-life-and-support/career-services"
+[2025-05-21T21:31:12.022Z] Found matching page with ID 8016, title "Career Action Center" at path: student-life-and-support/career-services
+[2025-05-21T21:31:12.023Z] Found page with ID 8016, title "Career Action Center" using hierarchical lookup
+[2025-05-21T21:31:12.023Z]   - Found WordPress page ID: 8016, Title: Career Action Center
+[2025-05-21T21:31:12.024Z]   - Using WordPress page title as menu label: "Career Action Center"
+[2025-05-21T21:31:12.048Z]   - Created menu item: Career Action Center, Menu ID: 35, Item ID: 11293
+[2025-05-21T21:31:12.049Z] Processing menu item from row: https://studentaffairs.vancouver.wsu.edu/registrars-office/commencement (6.04)
+[2025-05-21T21:31:12.049Z]   - Original URL: /student-life-and-support/commencement
+[2025-05-21T21:31:12.049Z]   - Extracted slug: student-life-and-support/commencement
+[2025-05-21T21:31:12.049Z] Looking for page with slug: student-life-and-support/commencement
+[2025-05-21T21:31:12.049Z] Using hierarchical lookup for: "student-life-and-support/commencement"
+[2025-05-21T21:31:12.049Z] Looking for page with slug "commencement" in path "student-life-and-support/commencement"
+[2025-05-21T21:31:12.090Z] Found matching page with ID 8019, title "Commencement" at path: student-life-and-support/commencement
+[2025-05-21T21:31:12.091Z] Found page with ID 8019, title "Commencement" using hierarchical lookup
+[2025-05-21T21:31:12.091Z]   - Found WordPress page ID: 8019, Title: Commencement
+[2025-05-21T21:31:12.091Z]   - Using WordPress page title as menu label: "Commencement"
+[2025-05-21T21:31:12.125Z]   - Created menu item: Commencement, Menu ID: 35, Item ID: 11294
+[2025-05-21T21:31:12.126Z] Processing menu item from row: (No title in spreadsheet) (6.05)
+[2025-05-21T21:31:12.126Z]   - Original URL: /student-life-and-support/diversity-inclusion
+[2025-05-21T21:31:12.126Z]   - Extracted slug: student-life-and-support/diversity-inclusion
+[2025-05-21T21:31:12.126Z] Looking for page with slug: student-life-and-support/diversity-inclusion
+[2025-05-21T21:31:12.126Z] Using hierarchical lookup for: "student-life-and-support/diversity-inclusion"
+[2025-05-21T21:31:12.126Z] Looking for page with slug "diversity-inclusion" in path "student-life-and-support/diversity-inclusion"
+[2025-05-21T21:31:12.169Z] Found matching page with ID 8017, title "Diversity inclusion" at path: student-life-and-support/diversity-inclusion
+[2025-05-21T21:31:12.169Z] Found page with ID 8017, title "Diversity inclusion" using hierarchical lookup
+[2025-05-21T21:31:12.170Z]   - Found WordPress page ID: 8017, Title: Diversity inclusion
+[2025-05-21T21:31:12.170Z]   - Using WordPress page title as menu label: "Diversity inclusion"
+[2025-05-21T21:31:12.193Z]   - Created menu item: Diversity inclusion, Menu ID: 35, Item ID: 11295
+[2025-05-21T21:31:12.194Z] Processing menu item from row: (No title in spreadsheet) (6.05)
+[2025-05-21T21:31:12.194Z]   - Original URL: /student-life-and-support/engaged-learning-career-action-center
+[2025-05-21T21:31:12.194Z]   - Extracted slug: student-life-and-support/engaged-learning-career-action-center
+[2025-05-21T21:31:12.194Z] Looking for page with slug: student-life-and-support/engaged-learning-career-action-center
+[2025-05-21T21:31:12.194Z] Using hierarchical lookup for: "student-life-and-support/engaged-learning-career-action-center"
+[2025-05-21T21:31:12.194Z] Looking for page with slug "engaged-learning-career-action-center" in path "student-life-and-support/engaged-learning-career-action-center"
+[2025-05-21T21:31:12.231Z] Found matching page with ID 8020, title "Engaged learning career action center" at path: student-life-and-support/engaged-learning-career-action-center
+[2025-05-21T21:31:12.231Z] Found page with ID 8020, title "Engaged learning career action center" using hierarchical lookup
+[2025-05-21T21:31:12.231Z]   - Found WordPress page ID: 8020, Title: Engaged learning career action center
+[2025-05-21T21:31:12.231Z]   - Using WordPress page title as menu label: "Engaged learning career action center"
+[2025-05-21T21:31:12.255Z]   - Created menu item: Engaged learning career action center, Menu ID: 35, Item ID: 11296
+[2025-05-21T21:31:12.255Z] Processing menu item from row: (No title in spreadsheet) (6.06)
+[2025-05-21T21:31:12.255Z]   - Original URL: /student-life-and-support/student-affairs
+[2025-05-21T21:31:12.256Z]   - Extracted slug: student-life-and-support/student-affairs
+[2025-05-21T21:31:12.256Z] Looking for page with slug: student-life-and-support/student-affairs
+[2025-05-21T21:31:12.256Z] Using hierarchical lookup for: "student-life-and-support/student-affairs"
+[2025-05-21T21:31:12.256Z] Looking for page with slug "student-affairs" in path "student-life-and-support/student-affairs"
+[2025-05-21T21:31:12.292Z] Found matching page with ID 8029, title "Student affairs" at path: student-life-and-support/student-affairs
+[2025-05-21T21:31:12.293Z] Found page with ID 8029, title "Student affairs" using hierarchical lookup
+[2025-05-21T21:31:12.293Z]   - Found WordPress page ID: 8029, Title: Student affairs
+[2025-05-21T21:31:12.293Z]   - Using WordPress page title as menu label: "Student affairs"
+[2025-05-21T21:31:12.315Z]   - Created menu item: Student affairs, Menu ID: 35, Item ID: 11297
+[2025-05-21T21:31:12.316Z] Processing menu item from row: (No title in spreadsheet) (6.07)
+[2025-05-21T21:31:12.317Z]   - Original URL: /student-life-and-support/student-involvement
+[2025-05-21T21:31:12.317Z]   - Extracted slug: student-life-and-support/student-involvement
+[2025-05-21T21:31:12.317Z] Looking for page with slug: student-life-and-support/student-involvement
+[2025-05-21T21:31:12.317Z] Using hierarchical lookup for: "student-life-and-support/student-involvement"
+[2025-05-21T21:31:12.317Z] Looking for page with slug "student-involvement" in path "student-life-and-support/student-involvement"
+[2025-05-21T21:31:12.352Z] Found matching page with ID 8032, title "Student involvement" at path: student-life-and-support/student-involvement
+[2025-05-21T21:31:12.353Z] Found page with ID 8032, title "Student involvement" using hierarchical lookup
+[2025-05-21T21:31:12.353Z]   - Found WordPress page ID: 8032, Title: Student involvement
+[2025-05-21T21:31:12.353Z]   - Using WordPress page title as menu label: "Student involvement"
+[2025-05-21T21:31:12.378Z]   - Created menu item: Student involvement, Menu ID: 35, Item ID: 11298
+[2025-05-21T21:31:12.380Z] Processing menu item from row: (No title in spreadsheet) (6.08)
+[2025-05-21T21:31:12.380Z]   - Original URL: /student-life-and-support/student-organizations
+[2025-05-21T21:31:12.380Z]   - Extracted slug: student-life-and-support/student-organizations
+[2025-05-21T21:31:12.380Z] Looking for page with slug: student-life-and-support/student-organizations
+[2025-05-21T21:31:12.380Z] Using hierarchical lookup for: "student-life-and-support/student-organizations"
+[2025-05-21T21:31:12.380Z] Looking for page with slug "student-organizations" in path "student-life-and-support/student-organizations"
+[2025-05-21T21:31:12.434Z] Found matching page with ID 8034, title "Student organizations" at path: student-life-and-support/student-organizations
+[2025-05-21T21:31:12.435Z] Found page with ID 8034, title "Student organizations" using hierarchical lookup
+[2025-05-21T21:31:12.443Z]   - Found WordPress page ID: 8034, Title: Student organizations
+[2025-05-21T21:31:12.445Z]   - Using WordPress page title as menu label: "Student organizations"
+[2025-05-21T21:31:12.468Z]   - Created menu item: Student organizations, Menu ID: 35, Item ID: 11299
+[2025-05-21T21:31:12.468Z] Processing menu item from row: (No title in spreadsheet) (6.09)
+[2025-05-21T21:31:12.468Z]   - Original URL: /student-life-and-support/student-wellness
+[2025-05-21T21:31:12.468Z]   - Extracted slug: student-life-and-support/student-wellness
+[2025-05-21T21:31:12.468Z] Looking for page with slug: student-life-and-support/student-wellness
+[2025-05-21T21:31:12.468Z] Using hierarchical lookup for: "student-life-and-support/student-wellness"
+[2025-05-21T21:31:12.468Z] Looking for page with slug "student-wellness" in path "student-life-and-support/student-wellness"
+[2025-05-21T21:31:12.536Z] Found matching page with ID 8035, title "Student wellness" at path: student-life-and-support/student-wellness
+[2025-05-21T21:31:12.536Z] Found page with ID 8035, title "Student wellness" using hierarchical lookup
+[2025-05-21T21:31:12.537Z]   - Found WordPress page ID: 8035, Title: Student wellness
+[2025-05-21T21:31:12.537Z]   - Using WordPress page title as menu label: "Student wellness"
+[2025-05-21T21:31:12.563Z]   - Created menu item: Student wellness, Menu ID: 35, Item ID: 11300
+[2025-05-21T21:31:12.564Z] Processing menu item from row: (No title in spreadsheet) (6.1)
+[2025-05-21T21:31:12.564Z]   - Original URL: /student-life-and-support/veterans-services
+[2025-05-21T21:31:12.564Z]   - Extracted slug: student-life-and-support/veterans-services
+[2025-05-21T21:31:12.565Z] Looking for page with slug: student-life-and-support/veterans-services
+[2025-05-21T21:31:12.565Z] Using hierarchical lookup for: "student-life-and-support/veterans-services"
+[2025-05-21T21:31:12.565Z] Looking for page with slug "veterans-services" in path "student-life-and-support/veterans-services"
+[2025-05-21T21:31:12.602Z] Found matching page with ID 8036, title "Veterans services" at path: student-life-and-support/veterans-services
+[2025-05-21T21:31:12.603Z] Found page with ID 8036, title "Veterans services" using hierarchical lookup
+[2025-05-21T21:31:12.604Z]   - Found WordPress page ID: 8036, Title: Veterans services
+[2025-05-21T21:31:12.604Z]   - Using WordPress page title as menu label: "Veterans services"
+[2025-05-21T21:31:12.628Z]   - Created menu item: Veterans services, Menu ID: 35, Item ID: 11301
+[2025-05-21T21:31:12.629Z] Processing menu item from row: https://cas.vancouver.wsu.edu/writing-center (6.11)
+[2025-05-21T21:31:12.630Z]   - Original URL: /student-life-and-support/writing-center
+[2025-05-21T21:31:12.630Z]   - Extracted slug: student-life-and-support/writing-center
+[2025-05-21T21:31:12.630Z] Looking for page with slug: student-life-and-support/writing-center
+[2025-05-21T21:31:12.630Z] Using hierarchical lookup for: "student-life-and-support/writing-center"
+[2025-05-21T21:31:12.630Z] Looking for page with slug "writing-center" in path "student-life-and-support/writing-center"
+[2025-05-21T21:31:12.675Z] Found matching page with ID 8044, title "Writing Center" at path: student-life-and-support/writing-center
+[2025-05-21T21:31:12.676Z] Found page with ID 8044, title "Writing Center" using hierarchical lookup
+[2025-05-21T21:31:12.676Z]   - Found WordPress page ID: 8044, Title: Writing Center
+[2025-05-21T21:31:12.676Z]   - Using WordPress page title as menu label: "Writing Center"
+[2025-05-21T21:31:12.716Z]   - Created menu item: Writing Center, Menu ID: 35, Item ID: 11302
+[2025-05-21T21:31:12.729Z] Error assigning menu to location: availableLocations?.join is not a function
+[2025-05-21T21:31:12.729Z] Unable to assign menu to location. You may need to do this manually in the WordPress admin.
+[2025-05-21T21:31:12.729Z] Menu creation completed successfully!

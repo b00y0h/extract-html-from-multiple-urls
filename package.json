@@ -14,6 +14,7 @@
   "main": "index.js",
   "scripts": {
     "migrate": "NODE_ENV=staging node index.js",
+    "createMenu": "NODE_ENV=staging node createMenu.js",
     "migrate:staging": "NODE_ENV=staging node index.js",
     "migrate:production": "NODE_ENV=production node index.js"
   }

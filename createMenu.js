@@ -1,0 +1,890 @@
+require("dotenv").config();
+const { google } = require("googleapis");
+const WPAPI = require("wpapi");
+const axios = require("axios");
+const config = require("./src/config");
+const {
+  getAuthToken,
+  SHEET_NAMES,
+  RANGES,
+  COLUMNS,
+} = require("./src/updateGoogleSheet");
+const { findPageBySlug } = require("./src/postToWordpress");
+const { logMessage } = require("./src/utils/logs");
+const { verifyParentHierarchy } = require("./src/utils/urls");
+const { findPageByFullPath } = require("./src/utils/hierarchicalPageLookup");
+const { findPageByLink } = require("./src/utils/findPageByLink");
+
+const SHEET_ID = process.env.SHEET_ID;
+
+// Define the column we'll use for menu (already exists as "MENU" in updateGoogleSheet.js)
+const MENU_COLUMN = COLUMNS.MENU;
+
+// Initialize the WordPress API client
+const wp = new WPAPI({
+  endpoint: config.wordpress.apiBaseUrl,
+  username: config.wordpress.username,
+  password: config.wordpress.password,
+});
+
+/**
+ * Get menu items from the Google Sheet
+ * @param {any} auth - The auth token
+ * @returns {Promise<Array>} Array of menu items with their hierarchy information
+ */
+async function getMenuItemsFromSheet(auth) {
+  const service = google.sheets({ version: "v4", auth });
+
+  try {
+    logMessage(
+      `Getting menu items from Google Sheet ID: ${SHEET_ID}`,
+      config.paths.createMenuLogFile
+    );
+
+    const request = {
+      spreadsheetId: SHEET_ID,
+      range: `'${SHEET_NAMES.DATA}'!${RANGES.ALL_COLUMNS}`,
+      valueRenderOption: "UNFORMATTED_VALUE",
+    };
+
+    const response = await service.spreadsheets.values.get(request);
+    const rows = response.data.values;
+
+    if (!rows || !rows.length) {
+      logMessage("No data found in the sheet.", config.paths.createMenuLogFile);
+      return [];
+    }
+
+    // Find the Main Menu column index
+    const headers = rows[0];
+    const mainMenuColumnIndex = headers.findIndex(
+      (header) => header.trim() === MENU_COLUMN
+    );
+
+    if (mainMenuColumnIndex === -1) {
+      throw new Error(`Column '${MENU_COLUMN}' not found`);
+    }
+
+    // Get items with menu information
+    const menuItems = rows
+      .slice(1) // Skip headers
+      .filter((row) => row[mainMenuColumnIndex]) // Only rows with menu values
+      .map((row) => {
+        // Find the column indices for title and slug based on COLUMNS
+        const titleColumnIndex = headers.findIndex(
+          (header) => header === COLUMNS.ORIGINAL_LINK
+        );
+        const slugColumnIndex = headers.findIndex(
+          (header) => header === COLUMNS.COMPUTED_URL_FORMULA
+        );
+
+        // Get the URL from the appropriate column
+        const url =
+          slugColumnIndex >= 0 ? row[slugColumnIndex] || "" : row[1] || "";
+
+        // Extract the clean slug from the URL (remove domain and trailing slashes)
+        let slug = "";
+        if (url) {
+          try {
+            // Remove the domain part and clean up the path
+            // Use a properly formatted URL to prevent parsing errors
+            let fullUrl = url;
+            if (!url.startsWith("http")) {
+              fullUrl = `http://example.com${
+                url.startsWith("/") ? url : `/${url}`
+              }`;
+            }
+            const urlObj = new URL(fullUrl);
+            slug = urlObj.pathname;
+
+            // Remove leading and trailing slashes
+            slug = slug.replace(/^\/|\/$/g, "");
+
+            // For homepage, use a special identifier
+            if (!slug) {
+              slug = "home";
+            }
+          } catch (e) {
+            // If URL parsing fails, use the raw value
+            logMessage(
+              `Failed to parse URL: ${url}. Using as-is.`,
+              config.paths.createMenuLogFile
+            );
+            slug = url;
+          }
+        }
+
+        return {
+          menuNumber: row[mainMenuColumnIndex],
+          spreadsheetTitle:
+            titleColumnIndex >= 0 ? row[titleColumnIndex] || "" : row[0] || "",
+          url: url, // Keep the original URL for reference
+          slug: slug, // Clean slug for WordPress lookup
+          rowNumber: rows.indexOf(row),
+        };
+      });
+
+    logMessage(
+      `Found ${menuItems.length} menu items from sheet`,
+      config.paths.createMenuLogFile
+    );
+    return menuItems;
+  } catch (err) {
+    logMessage("Error accessing sheet:", err, config.paths.createMenuLogFile);
+    if (err.response) {
+      logMessage(
+        "Error details:",
+        err.response.data,
+        config.paths.createMenuLogFile
+      );
+    }
+    throw err;
+  }
+}
+
+/**
+ * Parse menu items into a hierarchical structure based on their numbering
+ * @param {Array} menuItems - Array of menu items from sheet
+ * @returns {Array} Array of menu items with parent-child relationships
+ */
+function parseMenuHierarchy(menuItems) {
+  // Sort by menu number
+  menuItems.sort((a, b) => {
+    // Convert string numbers to actual numbers for comparison
+    const aNum = parseFloat(a.menuNumber);
+    const bNum = parseFloat(b.menuNumber);
+    return aNum - bNum;
+  });
+
+  const menuStructure = [];
+  const itemMap = new Map();
+
+  menuItems.forEach((item) => {
+    const menuNum = parseFloat(item.menuNumber);
+    const menuNumString = menuNum.toString();
+
+    // Check if this is a top-level item (integer)
+    const isTopLevel = Number.isInteger(menuNum);
+
+    // For non-top level items, determine the parent based on the numbering system
+    // Example: parent of 1.2 is 1, parent of 2.3.1 would be 2.3
+    let parentNum;
+    if (isTopLevel) {
+      parentNum = null;
+    } else {
+      parentNum = Math.floor(menuNum);
+    }
+
+    // Create the menu entry
+    // Store spreadsheet title as spreadsheetTitle but don't use it as the main title
+    // The title will be replaced with the WordPress page title during WordPress lookup
+    const menuEntry = {
+      spreadsheetTitle: item.spreadsheetTitle, // Store original title from spreadsheet
+      slug: item.slug,
+      url: item.url, // Add the original URL
+      menuNumber: item.menuNumber,
+      parentNumber: isTopLevel ? null : parentNum.toFixed(2),
+      children: [],
+    };
+
+    // Store in map for quick lookup
+    itemMap.set(menuNum.toFixed(2), menuEntry);
+
+    if (isTopLevel) {
+      // Top level item goes directly into the structure
+      menuStructure.push(menuEntry);
+    } else {
+      // Child item - find parent and add to it
+      const parent = itemMap.get(parentNum.toFixed(2));
+      if (parent) {
+        parent.children.push(menuEntry);
+      } else {
+        logMessage(
+          `Parent menu item ${parentNum.toFixed(2)} not found for ${
+            menuEntry.spreadsheetTitle
+          }`,
+          config.paths.createMenuLogFile
+        );
+        // If parent not found, add as top-level
+        menuStructure.push(menuEntry);
+      }
+    }
+  });
+
+  return menuStructure;
+}
+
+/**
+ * Create a WordPress menu with the given name
+ * @param {string} menuName - Name for the new menu
+ * @returns {Promise<number>} ID of the created menu
+ */
+async function createWordPressMenu(menuName) {
+  try {
+    // Append current date and time to menu name to make it unique
+    const now = new Date();
+    const formattedDate = `${now.getFullYear()}-${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(
+      now.getHours()
+    ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const uniqueMenuName = `${menuName} - ${formattedDate}`;
+
+    logMessage(
+      `Creating WordPress menu: ${uniqueMenuName}`,
+      config.paths.createMenuLogFile
+    );
+
+    // We always create a new menu with a unique name based on date/time
+    // So we don't need to check for an existing one with the same name
+
+    // Create a new menu with the unique name
+    const createResponse = await axios.post(
+      `${config.wordpress.apiBaseUrl}/wp/v2/menus`,
+      {
+        name: uniqueMenuName,
+        auto_add: false,
+      },
+      {
+        auth: {
+          username: config.wordpress.username,
+          password: config.wordpress.password,
+        },
+      }
+    );
+
+    const newMenuId = createResponse.data.id;
+    logMessage(
+      `Menu created with ID: ${newMenuId}`,
+      config.paths.createMenuLogFile
+    );
+    return newMenuId;
+  } catch (error) {
+    if (error.response && error.response.data) {
+      logMessage(
+        `Error creating WordPress menu: ${JSON.stringify(error.response.data)}`,
+        config.paths.createMenuLogFile
+      );
+    } else {
+      logMessage(
+        `Error creating WordPress menu: ${error.message}`,
+        config.paths.createMenuLogFile
+      );
+    }
+
+    // If we get a 404, it might mean the WP API Menus plugin isn't installed
+    if (error.response && error.response.status === 404) {
+      logMessage(
+        "The WP API Menus plugin might not be installed.",
+        config.paths.createMenuLogFile
+      );
+      logMessage(
+        'Please install the "WP API Menus" plugin in WordPress and try again.',
+        config.paths.createMenuLogFile
+      );
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Get WordPress page ID and title by slug
+ * @param {string} slug - Page slug to find
+ * @returns {Promise<{id: number, title: string}|null>} Page ID and title or null if not found
+ */
+async function getPageIdBySlug(slug) {
+  try {
+    logMessage(
+      `Looking for page with slug: ${slug}`,
+      config.paths.createMenuLogFile
+    );
+
+    // Normalize slug by removing leading slashes
+    const normalizedSlug = slug.replace(/^\/+/, "");
+
+    // First, check if this is a top-level page or a hierarchical page
+    const isHierarchical = normalizedSlug.includes("/");
+    const topLevelSlug = isHierarchical
+      ? normalizedSlug.split("/")[0]
+      : normalizedSlug;
+
+    // If this is a top-level menu item, ensure we get the correct top-level page
+    if (!isHierarchical) {
+      logMessage(
+        `Looking for top-level page with slug: "${normalizedSlug}"`,
+        config.paths.createMenuLogFile
+      );
+
+      // Get all pages with this slug
+      const matchingPages = await wp
+        .pages()
+        .param("slug", normalizedSlug)
+        .get();
+
+      if (matchingPages && matchingPages.length > 0) {
+        // Find a top-level page (parent id is 0)
+        const topLevelPage = matchingPages.find((page) => page.parent === 0);
+
+        if (topLevelPage) {
+          logMessage(
+            `Found top-level page with ID ${topLevelPage.id}, title "${topLevelPage.title.rendered}"`,
+            config.paths.createMenuLogFile
+          );
+          return {
+            id: topLevelPage.id,
+            title: topLevelPage.title.rendered,
+          };
+        } else {
+          logMessage(
+            `Found ${matchingPages.length} pages with slug "${normalizedSlug}" but none are top-level (parent = 0)`,
+            config.paths.createMenuLogFile
+          );
+        }
+      } else {
+        logMessage(
+          `No pages found with slug "${normalizedSlug}"`,
+          config.paths.createMenuLogFile
+        );
+      }
+    }
+
+    // For hierarchical paths, or if top-level lookup failed, use the hierarchical lookup
+    logMessage(
+      `Using hierarchical lookup for: "${normalizedSlug}"`,
+      config.paths.createMenuLogFile
+    );
+    const pageInfo = await findPageByFullPath(normalizedSlug);
+
+    if (pageInfo) {
+      logMessage(
+        `Found page with ID ${pageInfo.id}, title "${pageInfo.title}" using hierarchical lookup`,
+        config.paths.createMenuLogFile
+      );
+      return pageInfo;
+    }
+
+    // If hierarchical lookup fails, try the legacy approach as fallback
+    // But only for hierarchical paths - for top-level paths, we want to be more strict
+    if (isHierarchical) {
+      logMessage(
+        `Hierarchical lookup failed for "${normalizedSlug}", trying fallback...`,
+        config.paths.createMenuLogFile
+      );
+
+      // Get the last segment of the path
+      const lastSegment = normalizedSlug.split("/").pop();
+
+      if (lastSegment) {
+        logMessage(
+          `Looking for page with slug: ${lastSegment}`,
+          config.paths.createMenuLogFile
+        );
+        const fallbackPageId = await findPageBySlug(lastSegment);
+
+        if (fallbackPageId) {
+          const fallbackPage = await wp.pages().id(fallbackPageId).get();
+          logMessage(
+            `Found page with ID ${fallbackPageId} and title: ${fallbackPage.title.rendered} (fallback method)`,
+            config.paths.createMenuLogFile
+          );
+          return {
+            id: fallbackPageId,
+            title: fallbackPage.title.rendered,
+          };
+        }
+      }
+    } else {
+      // For top-level paths, log the failure but don't try the legacy fallback
+      logMessage(
+        `No top-level page found with slug: "${normalizedSlug}" - skipping legacy fallback`,
+        config.paths.createMenuLogFile
+      );
+    }
+
+    // Before giving up, try one more approach: find by exact link path
+    // This is particularly useful for top-level pages
+    logMessage(
+      `Trying to find page by exact link path: "${normalizedSlug}"`,
+      config.paths.createMenuLogFile
+    );
+
+    const linkPathPage = await findPageByLink(normalizedSlug);
+    if (linkPathPage) {
+      logMessage(
+        `Found page by link path with ID ${linkPathPage.id}, title "${linkPathPage.title}"`,
+        config.paths.createMenuLogFile
+      );
+      return linkPathPage;
+    }
+
+    logMessage(
+      `No page found with slug: ${normalizedSlug}`,
+      config.paths.createMenuLogFile
+    );
+    return null;
+  } catch (error) {
+    logMessage(
+      `Error finding page with slug ${slug}: ${error.message}`,
+      config.paths.createMenuLogFile
+    );
+    return null;
+  }
+}
+
+/**
+ * Add menu items to a WordPress menu
+ * @param {number} menuId - WordPress menu ID
+ * @param {Array} menuStructure - Hierarchical menu structure
+ * @param {number} parentId - Parent menu item ID (for recursive creation)
+ * @returns {Promise<void>}
+ */
+async function addMenuItems(menuId, menuStructure, parentId = 0) {
+  for (const item of menuStructure) {
+    let itemId = null;
+
+    // Use spreadsheetTitle for logging but don't use it for the actual menu item
+    const displayTitle = item.spreadsheetTitle || "(No title in spreadsheet)";
+
+    logMessage(
+      `Processing menu item from row: ${displayTitle} (${item.menuNumber})`,
+      config.paths.createMenuLogFile
+    );
+    logMessage(`  - Original URL: ${item.url}`, config.paths.createMenuLogFile);
+    logMessage(
+      `  - Extracted slug: ${item.slug}`,
+      config.paths.createMenuLogFile
+    );
+
+    if (item.slug) {
+      // Try to get the page ID and title from WordPress
+      const pageInfo = await getPageIdBySlug(item.slug);
+
+      if (pageInfo) {
+        logMessage(
+          `  - Found WordPress page ID: ${pageInfo.id}, Title: ${pageInfo.title}`,
+          config.paths.createMenuLogFile
+        );
+
+        // Always use WordPress page title for the menu item
+        const navigationLabel = pageInfo.title;
+        logMessage(
+          `  - Using WordPress page title as menu label: "${navigationLabel}"`,
+          config.paths.createMenuLogFile
+        );
+
+        // Create menu item linked to the page
+        const menuItem = {
+          title: navigationLabel, // Always use WordPress page title, not the spreadsheet title
+          object_id: pageInfo.id,
+          parent: parentId, // Use 'parent' field for REST API (not menu_item_parent)
+          menu_order: Math.floor(parseFloat(item.menuNumber) * 100), // Use number for ordering
+          type: "post_type",
+          object: "page",
+          status: "publish",
+        };
+
+        try {
+          // Add menu item using WordPress REST API
+          const response = await axios.post(
+            `${config.wordpress.apiBaseUrl}/wp/v2/menu-items`,
+            {
+              ...menuItem,
+              menus: menuId,
+            },
+            {
+              auth: {
+                username: config.wordpress.username,
+                password: config.wordpress.password,
+              },
+            }
+          );
+
+          logMessage(
+            `  - Created menu item: ${navigationLabel}, Menu ID: ${menuId}, Item ID: ${response.data.id}`,
+            config.paths.createMenuLogFile
+          );
+          itemId = response.data.id;
+        } catch (error) {
+          logMessage(
+            `  - Error creating menu item using REST API`,
+            config.paths.createMenuLogFile
+          );
+
+          if (error.response && error.response.data) {
+            logMessage(
+              `  - Error details: ${JSON.stringify(error.response.data)}`,
+              config.paths.createMenuLogFile
+            );
+          } else {
+            logMessage(
+              `  - Error: ${error.message}`,
+              config.paths.createMenuLogFile
+            );
+          }
+
+          // Try alternative approach with wp_update_nav_menu_item if REST API fails
+          if (error.response && error.response.status === 404) {
+            logMessage(
+              "  - Using fallback method for menu item creation...",
+              config.paths.createMenuLogFile
+            );
+
+            // Use standard WordPress API endpoint directly
+            try {
+              const formData = new URLSearchParams();
+              formData.append("menu", menuId);
+              formData.append("menu-item-title", pageInfo.title); // Use WordPress page title
+              formData.append("menu-item-object-id", pageInfo.id);
+              formData.append("menu-item-parent-id", parentId); // The key is menu-item-parent-id for the classic API endpoint
+              formData.append(
+                "menu-item-position",
+                Math.floor(parseFloat(item.menuNumber) * 100)
+              );
+              formData.append("menu-item-type", "post_type");
+              formData.append("menu-item-object", "page");
+              formData.append("menu-item-status", "publish");
+
+              const fallbackResponse = await axios.post(
+                `${config.wordpress.baseUrl}/wp-admin/admin-ajax.php?action=add_menu_item`,
+                formData,
+                {
+                  auth: {
+                    username: config.wordpress.username,
+                    password: config.wordpress.password,
+                  },
+                  headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                  },
+                }
+              );
+
+              if (fallbackResponse.data && fallbackResponse.data.success) {
+                logMessage(
+                  `  - Created menu item using fallback: ${pageInfo.title}`,
+                  config.paths.createMenuLogFile
+                );
+                itemId = fallbackResponse.data.menu_item_id;
+              }
+            } catch (fallbackError) {
+              logMessage(
+                `  - Fallback method also failed: ${fallbackError.message}`,
+                config.paths.createMenuLogFile
+              );
+            }
+          }
+        }
+      } else {
+        logMessage(
+          `  - Skipping menu item "${displayTitle}" - page not found with slug: ${item.slug}`,
+          config.paths.createMenuLogFile
+        );
+
+        // Optionally, create a custom link instead of skipping
+        if (item.url) {
+          logMessage(
+            `  - Creating custom link menu item instead using original URL`,
+            config.paths.createMenuLogFile
+          );
+          try {
+            // For custom links (pages not found in WordPress), we'll use the spreadsheet title
+            // or the URL path as a fallback title if no spreadsheet title exists
+            let menuTitle = item.spreadsheetTitle;
+            try {
+              const urlObj = new URL(
+                item.url.startsWith("http")
+                  ? item.url
+                  : `http://example.com${
+                      item.url.startsWith("/") ? item.url : `/${item.url}`
+                    }`
+              );
+              const pathParts = urlObj.pathname
+                .split("/")
+                .filter((part) => part);
+              if (pathParts.length > 0) {
+                // Format the path for a nicer title
+                const lastPart = pathParts[pathParts.length - 1];
+                // Convert dashes and underscores to spaces and capitalize
+                const formattedTitle = lastPart
+                  .replace(/-|_/g, " ")
+                  .replace(/\b\w/g, (c) => c.toUpperCase());
+
+                if (formattedTitle && !menuTitle) {
+                  menuTitle = formattedTitle;
+                }
+              }
+            } catch (e) {
+              logMessage(
+                `  - Could not parse URL for title: ${e.message}`,
+                config.paths.createMenuLogFile
+              );
+            }
+
+            const customLinkItem = {
+              title: menuTitle, // Use the better title if available
+              url: item.url,
+              parent: parentId, // Use 'parent' field for REST API (not menu_item_parent)
+              menu_order: Math.floor(parseFloat(item.menuNumber) * 100),
+              type: "custom",
+              status: "publish",
+            };
+
+            const response = await axios.post(
+              `${config.wordpress.apiBaseUrl}/wp/v2/menu-items`,
+              {
+                ...customLinkItem,
+                menus: menuId,
+              },
+              {
+                auth: {
+                  username: config.wordpress.username,
+                  password: config.wordpress.password,
+                },
+              }
+            );
+
+            logMessage(
+              `  - Created custom link menu item: ${menuTitle}`,
+              config.paths.createMenuLogFile
+            );
+            itemId = response.data.id;
+          } catch (customLinkError) {
+            logMessage(
+              `  - Failed to create custom link: ${customLinkError.message}`,
+              config.paths.createMenuLogFile
+            );
+          }
+        }
+      }
+    } else {
+      logMessage(
+        `  - Menu item "${displayTitle}" has no slug, skipping`,
+        config.paths.createMenuLogFile
+      );
+    }
+
+    // Add child items recursively if we created this item
+    if (itemId && item.children && item.children.length > 0) {
+      logMessage(
+        `  - Processing ${item.children.length} child items for "${displayTitle}"`,
+        config.paths.createMenuLogFile
+      );
+      await addMenuItems(menuId, item.children, itemId);
+    }
+  }
+}
+
+/**
+ * Assign menu to a location
+ * @param {number} menuId - WordPress menu ID
+ * @param {string} location - Menu location (e.g., 'primary')
+ * @returns {Promise<void>}
+ */
+async function assignMenuToLocation(menuId, location) {
+  try {
+    // Get available menu locations
+    const locationsResponse = await axios.get(
+      `${config.wordpress.apiBaseUrl}/wp/v2/menu-locations`,
+      {
+        auth: {
+          username: config.wordpress.username,
+          password: config.wordpress.password,
+        },
+      }
+    );
+
+    // Check if the location exists
+    const availableLocations = locationsResponse.data;
+    // Check if availableLocations is an array before using includes()
+    if (
+      !Array.isArray(availableLocations) ||
+      !availableLocations.includes(location)
+    ) {
+      logMessage(
+        `Menu location "${location}" not found. Available locations: ${
+          availableLocations?.join(", ") || "None"
+        }`,
+        config.paths.createMenuLogFile
+      );
+      logMessage("Trying alternate method...", config.paths.createMenuLogFile);
+
+      // Try using theme_mods option
+      try {
+        const optionsResponse = await axios.get(
+          `${config.wordpress.apiBaseUrl}/wp/v2/settings`,
+          {
+            auth: {
+              username: config.wordpress.username,
+              password: config.wordpress.password,
+            },
+          }
+        );
+
+        // Extract existing theme_mods
+        let settings = optionsResponse.data;
+        if (!settings.theme_mods) {
+          settings.theme_mods = {};
+        }
+
+        if (!settings.theme_mods.nav_menu_locations) {
+          settings.theme_mods.nav_menu_locations = {};
+        }
+
+        // Set the menu for this location
+        settings.theme_mods.nav_menu_locations[location] = menuId;
+
+        // Update the setting
+        await axios.post(
+          `${config.wordpress.apiBaseUrl}/wp/v2/settings`,
+          {
+            theme_mods: settings.theme_mods,
+          },
+          {
+            auth: {
+              username: config.wordpress.username,
+              password: config.wordpress.password,
+            },
+          }
+        );
+
+        logMessage(
+          `Assigned menu ID ${menuId} to ${location} location using theme_mods`,
+          config.paths.createMenuLogFile
+        );
+        return;
+      } catch (settingsError) {
+        logMessage(
+          `Error updating theme_mods: ${settingsError.message}`,
+          config.paths.createMenuLogFile
+        );
+      }
+    }
+
+    logMessage(
+      `Assigned menu ID ${menuId} to ${location} location`,
+      config.paths.createMenuLogFile
+    );
+  } catch (error) {
+    if (error.response && error.response.data) {
+      logMessage(
+        `Error assigning menu to location: ${JSON.stringify(
+          error.response.data
+        )}`,
+        config.paths.createMenuLogFile
+      );
+    } else {
+      logMessage(
+        `Error assigning menu to location: ${error.message}`,
+        config.paths.createMenuLogFile
+      );
+    }
+
+    logMessage(
+      "Unable to assign menu to location. You may need to do this manually in the WordPress admin.",
+      config.paths.createMenuLogFile
+    );
+  }
+}
+
+/**
+ * Main function to create a WordPress menu based on Google Sheet data
+ * Each execution creates a new menu with a timestamp to ensure uniqueness
+ */
+async function createMenu() {
+  try {
+    logMessage(
+      "Starting WordPress menu creation from Google Sheet...",
+      config.paths.createMenuLogFile
+    );
+
+    // Get auth token for Google Sheets
+    const auth = await getAuthToken();
+
+    // Get menu items from sheet
+    const menuItems = await getMenuItemsFromSheet(auth);
+
+    if (menuItems.length === 0) {
+      logMessage(
+        "No menu items found, exiting.",
+        config.paths.createMenuLogFile
+      );
+      return;
+    }
+
+    // Parse the hierarchical structure
+    const menuStructure = parseMenuHierarchy(menuItems);
+    logMessage(
+      "Menu hierarchy parsed with structure:",
+      config.paths.createMenuLogFile
+    );
+    logMessage(
+      JSON.stringify(menuStructure, null, 2),
+      config.paths.createMenuLogFile
+    );
+
+    // Create a WordPress menu with a unique name
+    const menuId = await createWordPressMenu("Primary Navigation");
+
+    if (!menuId) {
+      logMessage(
+        "Failed to create menu. Exiting.",
+        config.paths.createMenuLogFile
+      );
+      return;
+    }
+
+    // Add menu items from the structure
+    await addMenuItems(menuId, menuStructure);
+
+    // Assign menu to primary location
+    await assignMenuToLocation(menuId, "primary");
+
+    logMessage(
+      "Menu creation completed successfully!",
+      config.paths.createMenuLogFile
+    );
+  } catch (error) {
+    logMessage(
+      "Error in menu creation:",
+      error.message,
+      config.paths.createMenuLogFile
+    );
+    if (error.response) {
+      logMessage(
+        "Response status:",
+        error.response.status,
+        config.paths.createMenuLogFile
+      );
+      logMessage(
+        "Response data:",
+        JSON.stringify(error.response.data, null, 2),
+        config.paths.createMenuLogFile
+      );
+    }
+
+    logMessage("\nTROUBLESHOOTING TIPS:", config.paths.createMenuLogFile);
+    logMessage(
+      "1. Make sure WordPress REST API is enabled",
+      config.paths.createMenuLogFile
+    );
+    logMessage(
+      "2. Verify your WordPress credentials in .env file",
+      config.paths.createMenuLogFile
+    );
+    logMessage(
+      "3. Ensure the 'Main Menu' column exists in your Google Sheet",
+      config.paths.createMenuLogFile
+    );
+    logMessage(
+      "4. Check if your WordPress theme supports menus and has the 'primary' location",
+      config.paths.createMenuLogFile
+    );
+    logMessage(
+      "5. Some WordPress installations may require the 'WP API Menus' plugin for full menu support",
+      config.paths.createMenuLogFile
+    );
+  }
+}
+
+// Execute the menu creation
+createMenu();
