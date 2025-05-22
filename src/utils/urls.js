@@ -216,27 +216,30 @@ async function createHierarchyLevel(slug, parentId) {
     `Creating missing hierarchy level: ${slug} with parent: ${parentId}`
   );
 
-  const { postToWordPress } = require("../postToWordpress");
+  const { postToWordPress, getParentPagePath } = require("../postToWordpress");
 
   // Create a placeholder page for this hierarchy level
   const title = slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ");
   const placeholderContent = `<!-- wp:paragraph --><p>This is a placeholder page for ${title}.</p><!-- /wp:paragraph -->`;
 
-  // Construct a URL path for this level
+  // Construct a URL path for this level by getting the full parent path
   let urlPath = slug;
   if (parentId > 0) {
-    // In a real implementation, you would need to reconstruct the full path
-    // by looking up the parent's path, but for simplicity we're just using the slug
-    urlPath = `/pages/${slug}`;
+    // Get the full parent path to ensure correct hierarchy
+    const parentPath = await getParentPagePath(parentId);
+    urlPath = parentPath ? `${parentPath}/${slug}` : slug;
+    console.log(`Constructed full URL path: ${urlPath}`);
   }
 
   // Create the page
-  const pageId = await postToWordPress(
+  const result = await postToWordPress(
     urlPath,
     placeholderContent,
     title,
     "Create"
   );
+
+  const pageId = result.pageId;
 
   console.log(`Created hierarchy level "${slug}" with ID: ${pageId}`);
   return pageId;

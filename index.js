@@ -194,7 +194,8 @@ async function processContent(
 
     // Post the dummy content to WordPress
     console.log(`📤 Sending to WordPress...`);
-    const pageId = await postToWordPress(computedUrl, dummyContent, title);
+    const result = await postToWordPress(computedUrl, dummyContent, title);
+    const pageId = result.pageId;
 
     if (pageId) {
       console.log(`✨ Successfully created WordPress page with ID: ${pageId}`);
@@ -342,11 +343,13 @@ async function processContent(
     };
 
     console.log(`📤 Sending to WordPress...`);
-    const pageId = await postToWordPress(
+    const result = await postToWordPress(
       computedUrl,
       transformedToWPContent,
       pageTitle
     );
+
+    const pageId = result.pageId;
 
     if (pageId) {
       console.log(`✨ Successfully created WordPress page with ID: ${pageId}`);

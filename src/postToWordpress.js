@@ -212,7 +212,10 @@ async function postToWordPress(url, content, title, action = "Move") {
       // Construct the full path for this page
       const fullPath = pathSegments.join("/");
       console.log(`Trying to find page by full path: ${fullPath}`);
-      const pageByPath = await findPageByPath(fullPath);
+
+      // Use the more robust path finding function from pathUtils
+      const { findPageByExactPath } = require("./utils/pathUtils");
+      const pageByPath = await findPageByExactPath(fullPath);
 
       if (pageByPath) {
         console.log(
@@ -252,7 +255,7 @@ async function postToWordPress(url, content, title, action = "Move") {
     const newPage = await wp.pages().create(pageData);
     console.log(`Successfully created page with ID: ${newPage.id}`);
 
-    return newPage.id;
+    return { pageId: newPage.id };
   } catch (error) {
     console.error(`Error posting to WordPress: ${error.message}`);
     throw error;
@@ -401,6 +404,9 @@ async function findPageByPath(fullPath) {
 
     console.log(`Found ${matchingPages.length} pages with slug "${slug}"`);
 
+    // Check if any of the pages has a path that matches our full target path
+    console.log(`👀 Performing strict hierarchy check on all candidates`);
+
     // For each matching page, check if its full path matches our target
     for (const page of matchingPages) {
       // Get page link and convert to path
@@ -413,15 +419,51 @@ async function findPageByPath(fullPath) {
         const url = new URL(pageLink);
         pagePath = url.pathname.replace(/^\/|\/$/g, "");
         console.log(`Extracted path: ${pagePath}`);
+
+        // Normalize both paths for comparison (remove trailing slashes, handle empty paths)
+        const normalizedPagePath = pagePath.replace(/\/$/, "");
+        const targetNormalizedPath = normalizedPath.replace(/\/$/, "");
+
+        // Split paths into segments for comparing each part
+        const pagePathSegments = normalizedPagePath.split("/").filter(Boolean);
+        const targetPathSegments = targetNormalizedPath
+          .split("/")
+          .filter(Boolean);
+
+        // Extra logging for debugging
+        console.log(`Page path segments: ${JSON.stringify(pagePathSegments)}`);
+        console.log(
+          `Target path segments: ${JSON.stringify(targetPathSegments)}`
+        );
+
+        // Check for exact path match only if the number of segments match
+        if (pagePathSegments.length === targetPathSegments.length) {
+          let isMatchingPath = true;
+
+          // Compare each segment of the path - they must all match
+          for (let i = 0; i < targetPathSegments.length; i++) {
+            if (pagePathSegments[i] !== targetPathSegments[i]) {
+              isMatchingPath = false;
+              console.log(
+                `Mismatch at segment ${i}: ${pagePathSegments[i]} vs ${targetPathSegments[i]}`
+              );
+              break;
+            }
+          }
+
+          if (isMatchingPath) {
+            console.log(`✅ Found exact path match: Page ID ${page.id}`);
+            console.log(`✅ Matched path: ${normalizedPagePath}`);
+            return page.id;
+          }
+        } else {
+          console.log(
+            `❌ Path segment count mismatch: ${pagePathSegments.length} vs ${targetPathSegments.length}`
+          );
+        }
       } catch (e) {
         console.error(`Error parsing URL: ${e.message}`);
         continue;
-      }
-
-      // Check if paths match
-      if (pagePath === normalizedPath) {
-        console.log(`✅ Found exact path match: Page ID ${page.id}`);
-        return page.id;
       }
     }
 
@@ -430,6 +472,40 @@ async function findPageByPath(fullPath) {
   } catch (error) {
     console.error(`Error finding page by path: ${error.message}`);
     throw error;
+  }
+}
+
+// Function to get the full path for a page by its ID
+async function getParentPagePath(pageId) {
+  console.log(`Getting full path for page ID: ${pageId}`);
+
+  try {
+    // Get the page details
+    const page = await wp.pages().id(pageId).get();
+
+    if (!page) {
+      console.log(`No page found with ID: ${pageId}`);
+      return null;
+    }
+
+    // Extract the path from the page link
+    const pageLink = page.link;
+    let pagePath = "";
+
+    try {
+      const url = new URL(pageLink);
+      // Remove leading and trailing slashes
+      pagePath = url.pathname.replace(/^\/|\/$/g, "");
+      console.log(`Extracted path for page ID ${pageId}: ${pagePath}`);
+    } catch (e) {
+      console.error(`Error parsing URL: ${e.message}`);
+      return null;
+    }
+
+    return pagePath;
+  } catch (error) {
+    console.error(`Error getting page path: ${error.message}`);
+    return null;
   }
 }
 
@@ -453,4 +529,5 @@ module.exports = {
   },
   findPageBySlug,
   findPageByPath,
+  getParentPagePath,
 };

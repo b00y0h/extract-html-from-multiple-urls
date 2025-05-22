@@ -21,6 +21,7 @@ const COLUMNS = {
   WORDPRESS_LINK: "Wordpress Link",
   PROCESS_FIRST: "Process First",
   MENU: "Main Menu",
+  POST_ID: "Post ID",
 };
 
 // Action values
@@ -31,8 +32,8 @@ const ACTION_VALUES = {
 
 // Range constants
 const RANGES = {
-  ALL_COLUMNS: "A1:R",
-  HEADERS: "A1:R1",
+  ALL_COLUMNS: "A1:S",
+  HEADERS: "A1:S1",
 };
 
 async function getAuthToken() {
@@ -205,6 +206,9 @@ async function updateSheetWithTimestamp(auth, rowIndex, pageId) {
     const wordpressLinkColumnIndex = headers.findIndex(
       (header) => header.trim() === COLUMNS.WORDPRESS_LINK
     );
+    const postIdColumnIndex = headers.findIndex(
+      (header) => header.trim() === COLUMNS.POST_ID
+    );
 
     if (dateImportedColumnIndex === -1) {
       throw new Error(`Column '${COLUMNS.DATE_IMPORTED}' not found`);
@@ -212,11 +216,15 @@ async function updateSheetWithTimestamp(auth, rowIndex, pageId) {
     if (wordpressLinkColumnIndex === -1) {
       throw new Error(`Column '${COLUMNS.WORDPRESS_LINK}' not found`);
     }
+    if (postIdColumnIndex === -1) {
+      throw new Error(`Column '${COLUMNS.POST_ID}' not found`);
+    }
 
     const dateColumnLetter = String.fromCharCode(65 + dateImportedColumnIndex);
     const wordpressLinkColumnLetter = String.fromCharCode(
       65 + wordpressLinkColumnIndex
     );
+    const postIdColumnLetter = String.fromCharCode(65 + postIdColumnIndex);
 
     // Format the date
     const now = new Date();
@@ -234,22 +242,39 @@ async function updateSheetWithTimestamp(auth, rowIndex, pageId) {
 
     const wordpressLink = `${config.wordpress.baseUrl}/wp-admin/post.php?post=${pageId}&action=edit`;
 
-    const request = {
+    // Use values.batchUpdate to update all cells in a single API request
+    const batchUpdateRequest = {
       spreadsheetId: SHEET_ID,
-      range: `${SHEET_NAMES.DATA}!${dateColumnLetter}${
-        rowIndex + 1
-      }:${wordpressLinkColumnLetter}${rowIndex + 1}`,
-      valueInputOption: "USER_ENTERED",
       resource: {
-        values: [[formattedDate, wordpressLink]],
+        valueInputOption: "USER_ENTERED",
+        data: [
+          {
+            range: `${SHEET_NAMES.DATA}!${dateColumnLetter}${rowIndex + 1}`,
+            values: [[formattedDate]],
+          },
+          {
+            range: `${SHEET_NAMES.DATA}!${wordpressLinkColumnLetter}${
+              rowIndex + 1
+            }`,
+            values: [[wordpressLink]],
+          },
+          {
+            range: `${SHEET_NAMES.DATA}!${postIdColumnLetter}${rowIndex + 1}`,
+            values: [[pageId]],
+          },
+        ],
       },
     };
 
-    const response = await service.spreadsheets.values.update(request);
+    // Execute a single batch update instead of three separate requests
+    const response = await service.spreadsheets.values.batchUpdate(
+      batchUpdateRequest
+    );
+
     console.log(
       `Row ${
         rowIndex + 1
-      } updated with timestamp in column ${dateColumnLetter} and WordPress link in column ${wordpressLinkColumnLetter}.`
+      } updated with a single request: Date in ${dateColumnLetter}, WordPress link in ${wordpressLinkColumnLetter}, and Post ID in ${postIdColumnLetter}.`
     );
     return response;
   } catch (err) {
