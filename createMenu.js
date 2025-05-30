@@ -1,7 +1,7 @@
 require("dotenv").config();
 const { google } = require("googleapis");
-const WPAPI = require("wpapi");
 const axios = require("axios");
+const https = require("https");
 const config = require("./src/config");
 const {
   getAuthToken,
@@ -20,12 +20,38 @@ const SHEET_ID = process.env.SHEET_ID;
 // Define the column we'll use for menu (already exists as "MENU" in updateGoogleSheet.js)
 const MENU_COLUMN = COLUMNS.MENU;
 
-// Initialize the WordPress API client
-const wp = new WPAPI({
-  endpoint: config.wordpress.apiBaseUrl,
-  username: config.wordpress.username,
-  password: config.wordpress.password,
-});
+// Helper function to create an axios instance with proper auth and configuration
+function createWpAxios(requiresAuth = true) {
+  const instance = axios.create({
+    baseURL: config.wordpress.apiEndpointUrl,
+    headers: {
+      "User-Agent": config.wordpress.userAgent || "WordPress API Client",
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    httpsAgent: new https.Agent({
+      rejectUnauthorized: false,
+    }),
+    timeout: 10000,
+  });
+
+  // Add authentication if required
+  if (requiresAuth && config.wordpress.username && config.wordpress.password) {
+    const base64Credentials = Buffer.from(
+      `${config.wordpress.username}:${config.wordpress.password}`
+    ).toString("base64");
+
+    instance.defaults.headers.common[
+      "Authorization"
+    ] = `Basic ${base64Credentials}`;
+  }
+
+  return instance;
+}
+
+// Create axios instances for authenticated and public requests
+const wpAuthApi = createWpAxios(true);
+const wpPublicApi = createWpAxios(false);
 
 /**
  * Get menu items from the Google Sheet
@@ -383,15 +409,25 @@ async function getPageIdBySlug(slug) {
         const fallbackPageId = await findPageBySlug(lastSegment);
 
         if (fallbackPageId) {
-          const fallbackPage = await wp.pages().id(fallbackPageId).get();
-          logMessage(
-            `Found page with ID ${fallbackPageId} and title: ${fallbackPage.title.rendered} (fallback method)`,
-            config.paths.createMenuLogFile
-          );
-          return {
-            id: fallbackPageId,
-            title: fallbackPage.title.rendered,
-          };
+          try {
+            const response = await wpPublicApi.get(
+              `/wp/v2/pages/${fallbackPageId}`
+            );
+            const fallbackPage = response.data;
+            logMessage(
+              `Found page with ID ${fallbackPageId} and title: ${fallbackPage.title.rendered} (fallback method)`,
+              config.paths.createMenuLogFile
+            );
+            return {
+              id: fallbackPageId,
+              title: fallbackPage.title.rendered,
+            };
+          } catch (error) {
+            logMessage(
+              `Error getting fallback page details: ${error.message}`,
+              config.paths.createMenuLogFile
+            );
+          }
         }
       }
     } else {

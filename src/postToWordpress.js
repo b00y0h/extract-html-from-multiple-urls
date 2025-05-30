@@ -6,23 +6,370 @@ const config = require("./config");
 const { batchUploadImagesToWP } = require("./batchUploadImagesToWp");
 const path = require("path");
 const { logMessage } = require("./utils/logs");
-const WPAPI = require("wpapi");
 
-// Initialize the WordPress API client
-const wp = new WPAPI({
-  endpoint: config.wordpress.apiBaseUrl,
-  username: config.wordpress.username,
-  password: config.wordpress.password,
-});
+// Helper function to create an axios instance with proper auth and configuration
+function createWpAxios(requiresAuth = true) {
+  const instance = axios.create({
+    baseURL: config.wordpress.apiEndpointUrl,
+    headers: {
+      "User-Agent": config.wordpress.userAgent,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    httpsAgent: new https.Agent({
+      rejectUnauthorized: false,
+    }),
+    timeout: 10000,
+  });
+
+  // Add authentication if required
+  if (requiresAuth && config.wordpress.username && config.wordpress.password) {
+    const base64Credentials = Buffer.from(
+      `${config.wordpress.username}:${config.wordpress.password}`
+    ).toString("base64");
+
+    instance.defaults.headers.common[
+      "Authorization"
+    ] = `Basic ${base64Credentials}`;
+  }
+
+  return instance;
+}
+
+// Create axios instances for authenticated and public requests
+const wpAuthApi = createWpAxios(true);
+const wpPublicApi = createWpAxios(false);
 
 // Helper function for rate limiting
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const wpConfig = {
-  endpoint: config.wordpress.apiBaseUrl,
+  endpoint: config.wordpress.apiEndpointUrl, // Use the corrected URL with wp-json
   username: config.wordpress.username,
   password: config.wordpress.password,
 };
+console.log(
+  "✅✅✅✅✅✅ ~ wpConfig:",
+  wpConfig.endpoint,
+  wpConfig.username,
+  wpConfig.password
+);
+
+/**
+ * Validates WordPress connection before running any migration
+ * @returns {Promise<boolean>} True if connection is valid, throws error otherwise
+ */
+async function validateWordPressConnection() {
+  console.log("\n[VALIDATING WORDPRESS CONNECTION] ---------------------");
+  console.log(`Checking connection to: ${config.wordpress.apiBaseUrl}`);
+  console.log(`Username: ${config.wordpress.username}`);
+  console.log(
+    `Password: ${config.wordpress.password ? "********" : "[NOT SET]"}`
+  );
+
+  if (!config.wordpress.apiBaseUrl) {
+    throw new Error(
+      "WordPress API URL is not configured. Please check your environment variables."
+    );
+  }
+
+  if (!config.wordpress.username || !config.wordpress.password) {
+    throw new Error(
+      "WordPress credentials are not configured. Please check your environment variables."
+    );
+  }
+
+  // First check if the WordPress site is reachable at all (without auth)
+  try {
+    console.log(
+      `Testing if site is reachable at: ${config.wordpress.apiBaseUrl}`
+    );
+    const basicResponse = await axios.get(config.wordpress.apiBaseUrl, {
+      headers: {
+        "User-Agent": config.wordpress.userAgent,
+      },
+      httpsAgent: new https.Agent({
+        rejectUnauthorized: false,
+      }),
+      timeout: 10000,
+      validateStatus: () => true, // Don't throw on any status code
+    });
+
+    if (basicResponse.status >= 200 && basicResponse.status < 400) {
+      console.log(
+        `✅ WordPress site is reachable (Status: ${basicResponse.status})`
+      );
+    } else {
+      console.error(
+        `❌ WordPress site returned error status: ${basicResponse.status}`
+      );
+      throw new Error(
+        `WordPress site returned error status: ${basicResponse.status}`
+      );
+    }
+
+    // Check if REST API is available
+    console.log(
+      `Testing if REST API is available at: ${config.wordpress.apiBaseUrl}/wp-json/`
+    );
+    const restApiResponse = await axios.get(
+      `${config.wordpress.apiBaseUrl}/wp-json/`,
+      {
+        headers: {
+          "User-Agent": config.wordpress.userAgent,
+        },
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: false,
+        }),
+        timeout: 10000,
+        validateStatus: () => true, // Don't throw on any status code
+      }
+    );
+
+    if (restApiResponse.status === 200) {
+      console.log(`✅ WordPress REST API is available`);
+    } else {
+      console.error(
+        `❌ WordPress REST API is not available (Status: ${restApiResponse.status})`
+      );
+      throw new Error(
+        `WordPress REST API is not available: ${restApiResponse.status} ${restApiResponse.statusText}`
+      );
+    }
+
+    // Try to authenticate with the WordPress API
+    console.log(
+      `Testing authentication with username: ${config.wordpress.username}`
+    );
+    // Create Base64 encoded credentials (mimicking how browsers and Postman send credentials)
+    const base64Credentials = Buffer.from(
+      `${config.wordpress.username}:${config.wordpress.password}`
+    ).toString("base64");
+
+    // Define a list of user agents to try if the default fails
+    const userAgents = [
+      config.wordpress.userAgent,
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15", // Modern Safari
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", // Modern Chrome
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/119.0", // Modern Firefox
+      "PostmanRuntime/7.32.3", // Postman
+    ];
+
+    let response;
+    let successfulUserAgent;
+    let lastError;
+
+    // Try each user agent until one works
+    for (const userAgent of userAgents) {
+      try {
+        console.log(`Trying with User Agent: "${userAgent}"`);
+        response = await axios.get(
+          `${config.wordpress.apiBaseUrl}/wp-json/wp/v2/users/me`,
+          {
+            headers: {
+              "User-Agent": userAgent,
+              Authorization: `Basic ${base64Credentials}`,
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            httpsAgent: new https.Agent({
+              rejectUnauthorized: false,
+            }),
+            timeout: 10000,
+          }
+        );
+
+        successfulUserAgent = userAgent;
+        console.log(`✅ User agent "${userAgent}" worked successfully!`);
+        break; // Exit the loop if successful
+      } catch (err) {
+        console.log(`❌ User agent "${userAgent}" failed: ${err.message}`);
+        if (err.response) {
+          console.log(`  Status: ${err.response.status}`);
+        }
+        lastError = err;
+      }
+    }
+
+    if (!response) {
+      throw (
+        lastError ||
+        new Error("All user agents failed to authenticate with WordPress API")
+      );
+    }
+
+    // If we found a successful user agent that's different from the configured one, suggest updating it
+    if (
+      successfulUserAgent &&
+      successfulUserAgent !== config.wordpress.userAgent
+    ) {
+      console.log(
+        `\n⚠️ RECOMMENDATION: Update your WP_USER_AGENT in .env to: "${successfulUserAgent}"`
+      );
+    }
+
+    console.log(
+      `✅ WordPress connection successful! Connected as: ${response.data.name}`
+    );
+
+    // Check if roles property exists and is an array before calling join
+    if (response.data.roles && Array.isArray(response.data.roles)) {
+      console.log(`✅ User roles: ${response.data.roles.join(", ")}`);
+
+      // Additional check to verify user has necessary permissions
+      if (
+        !response.data.roles.some((role) =>
+          ["administrator", "editor", "author"].includes(role)
+        )
+      ) {
+        console.warn(
+          `⚠️ Warning: User may not have sufficient permissions for content creation. Current roles: ${response.data.roles.join(
+            ", "
+          )}`
+        );
+      }
+    } else {
+      console.log(`✅ User roles: Unknown or not provided`);
+      console.warn(
+        `⚠️ Warning: Could not determine user roles. This might affect content creation permissions.`
+      );
+    }
+
+    return true;
+  } catch (error) {
+    console.error("❌ WordPress connection failed:");
+
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error(`Status: ${error.response.status}`);
+      console.error(`Status Text: ${error.response.statusText}`);
+
+      if (error.response.status === 403) {
+        console.error(
+          "This appears to be a permissions issue. Possible causes:"
+        );
+        console.error(
+          "1. The credentials are correct but the user lacks sufficient permissions"
+        );
+        console.error(
+          "2. The WordPress site has a security plugin blocking API access"
+        );
+        console.error(
+          "3. Basic authentication is disabled on the WordPress instance"
+        );
+        console.error(
+          "4. The WordPress site may require application passwords instead of regular passwords"
+        );
+        console.error(
+          "5. The API endpoint URL may be incorrect or doesn't have the /wp-json prefix"
+        );
+
+        // Check if the URL structure is correct
+        if (!config.wordpress.apiBaseUrl.endsWith("/wp-json")) {
+          console.error(
+            "\n⚠️ Warning: Your API URL doesn't end with '/wp-json'"
+          );
+          console.error(`Current URL: ${config.wordpress.apiBaseUrl}`);
+          console.error(
+            "Suggestion: Make sure your API URL looks like: https://your-wordpress-site.com/wp-json"
+          );
+        }
+
+        // Try to check if the REST API is configured properly
+        try {
+          const namespaceResponse = await axios.get(
+            `${config.wordpress.apiBaseUrl.replace(
+              /\/wp-json\/?$/,
+              ""
+            )}/wp-json`,
+            {
+              headers: {
+                "User-Agent": config.wordpress.userAgent,
+              },
+              httpsAgent: new https.Agent({
+                rejectUnauthorized: false,
+              }),
+              timeout: 10000,
+              validateStatus: () => true,
+            }
+          );
+
+          if (namespaceResponse.status === 200) {
+            console.log(
+              "REST API is available, but authentication is failing. This suggests:"
+            );
+            console.log("- Basic authentication might be disabled");
+            console.log("- You might need to use application passwords");
+            console.log(
+              "- A security plugin might be blocking authenticated requests"
+            );
+          }
+        } catch (innerError) {
+          console.error(
+            "Could not check REST API availability:",
+            innerError.message
+          );
+        }
+      } else if (error.response.status === 401) {
+        console.error(
+          "This appears to be an authentication issue. Please check your username and password."
+        );
+        console.error(
+          "If your credentials are correct, try using application passwords instead: https://make.wordpress.org/core/2020/11/05/application-passwords-integration-guide/"
+        );
+      } else if (error.response.status === 404) {
+        console.error("The API endpoint was not found. This suggests:");
+        console.error("1. The WordPress REST API is not enabled");
+        console.error("2. The API URL is incorrect");
+
+        if (!config.wordpress.apiBaseUrl.endsWith("/wp-json")) {
+          console.error(
+            "\n⚠️ Warning: Your API URL doesn't end with '/wp-json'"
+          );
+          console.error(`Current URL: ${config.wordpress.apiBaseUrl}`);
+          console.error(
+            "Suggestion: Make sure your API URL looks like: https://your-wordpress-site.com/wp-json"
+          );
+        }
+      }
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error(
+        "No response received from the server. The server may be down or unreachable."
+      );
+      console.error(
+        "Please check that the WordPress URL is correct and the server is running."
+      );
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error(`Error message: ${error.message}`);
+    }
+
+    // Suggestion for resolving common issues
+    console.log("\n🔍 TROUBLESHOOTING SUGGESTIONS:");
+    console.log("1. Check your .env file for correct credentials and URLs");
+    console.log(
+      "2. Verify that the WordPress REST API is enabled on your site"
+    );
+    console.log("3. Check if any security plugins are blocking API access");
+    console.log(
+      "4. Make sure your WordPress version supports the REST API (4.7+)"
+    );
+    console.log(
+      "5. Try accessing the API endpoint in a browser: [WP_API_BASE_URL]/wp-json/"
+    );
+    console.log(
+      "6. Try using application passwords instead of your regular password"
+    );
+    console.log("7. Verify your API user has sufficient permissions");
+    console.log(
+      "8. Check if there are any rate limits or IP restrictions in place"
+    );
+
+    throw new Error(`WordPress connection failed: ${error.message}`);
+  }
+}
 
 // Process an individual image
 async function processImage(image) {
@@ -125,6 +472,19 @@ async function postToWordPress(url, content, title, action = "Move") {
   console.log(`Action: ${action}`);
 
   try {
+    // Validate WordPress connection before proceeding
+    try {
+      await validateWordPressConnection();
+    } catch (validationError) {
+      console.error(
+        "WordPress connection validation failed. Cannot proceed with posting content."
+      );
+      console.error(`Validation error: ${validationError.message}`);
+      throw new Error(
+        `WordPress connection failed: ${validationError.message}`
+      );
+    }
+
     // Handle if url is an object with originalUrl property
     const urlStr = typeof url === "object" ? url.originalUrl || url.url : url;
     if (!urlStr || typeof urlStr !== "string") {
@@ -169,7 +529,7 @@ async function postToWordPress(url, content, title, action = "Move") {
               currentSlug.charAt(0).toUpperCase() +
               currentSlug.slice(1).replace(/-/g, " ");
 
-            // Create placeholder page
+            // Create placeholder page using Axios
             const placeholderData = {
               title: placeholderTitle,
               content: `<!-- wp:paragraph --><p>This is a placeholder page for ${placeholderTitle}.</p><!-- /wp:paragraph -->`,
@@ -182,12 +542,20 @@ async function postToWordPress(url, content, title, action = "Move") {
               placeholderData.parent = parentId;
             }
 
-            // Create the page
+            // Create the page using Axios instead of WPAPI
             console.log(
               `Creating placeholder page with data:`,
               placeholderData
             );
-            const newPage = await wp.pages().create(placeholderData);
+
+            // Apply rate limiting
+            await sleep(config.wordpress.rateLimitMs);
+
+            const response = await wpAuthApi.post(
+              "/wp/v2/pages",
+              placeholderData
+            );
+            const newPage = response.data;
             parentId = newPage.id;
             console.log(`Created placeholder page with ID: ${parentId}`);
           } else {
@@ -250,14 +618,23 @@ async function postToWordPress(url, content, title, action = "Move") {
       console.log(`Creating root level page: ${slug}`);
     }
 
-    // Create the page
+    // Create the page using Axios instead of WPAPI
     console.log(`Creating new page with slug: ${slug}`);
-    const newPage = await wp.pages().create(pageData);
+
+    // Apply rate limiting
+    await sleep(config.wordpress.rateLimitMs);
+
+    const response = await wpAuthApi.post("/wp/v2/pages", pageData);
+    const newPage = response.data;
     console.log(`Successfully created page with ID: ${newPage.id}`);
 
     return { pageId: newPage.id };
   } catch (error) {
     console.error(`Error posting to WordPress: ${error.message}`);
+    if (error.response) {
+      console.error(`Status code: ${error.response.status}`);
+      console.error(`Response data:`, error.response.data);
+    }
     throw error;
   }
 }
@@ -268,34 +645,31 @@ async function updateParentPage(pageId, parentPageId) {
     // Apply rate limiting
     await sleep(config.wordpress.rateLimitMs);
 
-    await axios.post(
-      `${wpConfig.endpoint}/wp/v2/pages/${pageId}`,
-      { parent: parentPageId },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": config.wordpress.userAgent,
-        },
-        auth: {
-          username: wpConfig.username,
-          password: wpConfig.password,
-        },
-      }
-    );
+    // Use the authenticated wpAuthApi instance
+    const response = await wpAuthApi.post(`/wp/v2/pages/${pageId}`, {
+      parent: parentPageId,
+    });
 
     console.log(`Successfully updated parent for page ID: ${pageId}`);
     logMessage(
       `Successfully updated parent for page ID: ${pageId}`,
       config.paths.apiLogFile
     );
+
+    return response.data;
   } catch (error) {
     console.error(
       `Error updating parent for page ID ${pageId}: ${error.message}`
     );
+    if (error.response) {
+      console.error(`Status code: ${error.response.status}`);
+      console.error(`Response data:`, error.response.data);
+    }
     logMessage(
       `Error updating parent for page ID ${pageId}: ${error.message}`,
       config.paths.apiLogFile
     );
+    throw error; // Re-throw to allow consistent error handling
   }
 }
 
@@ -311,8 +685,16 @@ async function findPageBySlug(slug, parentId = null) {
     // Normalize the slug to ensure consistent matching
     const normalizedSlug = slug.toLowerCase().trim();
 
-    // Get all pages with this slug first
-    const matchingPages = await wp.pages().slug(normalizedSlug);
+    // Get all pages with this slug first - use public API since this is a read operation
+    const response = await wpPublicApi.get(
+      `/wp/v2/pages?slug=${normalizedSlug}`
+    );
+    const matchingPages = response.data;
+
+    console.log(
+      "🚀🚀🚀🚀🚀🚀 ~ findPageBySlug ~ matchingPages:",
+      matchingPages
+    );
 
     console.log(
       `Found ${matchingPages?.length || 0} pages with slug "${slug}"`
@@ -369,6 +751,12 @@ async function findPageBySlug(slug, parentId = null) {
     return matchingPages[0].id;
   } catch (error) {
     console.error(`Error finding page by slug: ${error.message}`);
+    // Log more detailed error information
+    if (error.response) {
+      console.error(`Status code: ${error.response.status}`);
+      console.error(`Response data:`, error.response.data);
+      console.error(`Response headers:`, error.response.headers);
+    }
     throw error;
   }
 }
@@ -395,7 +783,8 @@ async function findPageByPath(fullPath) {
     console.log(`Target slug: ${slug}`);
 
     // Get all pages with this slug
-    const matchingPages = await wp.pages().slug(slug);
+    const response = await wpPublicApi.get(`/wp/v2/pages?slug=${slug}`);
+    const matchingPages = response.data;
 
     if (!matchingPages || matchingPages.length === 0) {
       console.log(`No pages found with slug: ${slug}`);
@@ -480,8 +869,12 @@ async function getParentPagePath(pageId) {
   console.log(`Getting full path for page ID: ${pageId}`);
 
   try {
-    // Get the page details
-    const page = await wp.pages().id(pageId).get();
+    // Apply rate limiting
+    await sleep(config.wordpress.rateLimitMs);
+
+    // Get the page details using Axios instead of WPAPI
+    const response = await wpPublicApi.get(`/wp/v2/pages/${pageId}`);
+    const page = response.data;
 
     if (!page) {
       console.log(`No page found with ID: ${pageId}`);
@@ -505,6 +898,10 @@ async function getParentPagePath(pageId) {
     return pagePath;
   } catch (error) {
     console.error(`Error getting page path: ${error.message}`);
+    if (error.response) {
+      console.error(`Status code: ${error.response.status}`);
+      console.error(`Response data:`, error.response.data);
+    }
     return null;
   }
 }
@@ -513,6 +910,7 @@ module.exports = {
   postToWordPress,
   updateParentPage,
   processImage,
+  validateWordPressConnection,
   getParentPageSlug: (urlOrPath) => {
     let pathSegments;
     try {
@@ -530,4 +928,5 @@ module.exports = {
   findPageBySlug,
   findPageByPath,
   getParentPagePath,
+  validateWordPressConnection,
 };

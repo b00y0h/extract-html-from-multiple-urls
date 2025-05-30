@@ -3,16 +3,43 @@
  * This utility helps find WordPress pages by their hierarchical path
  */
 
-const WPAPI = require("wpapi");
+const axios = require("axios");
+const https = require("https");
 const config = require("../config");
 const { logMessage } = require("./logs");
 
-// Initialize WordPress API client
-const wp = new WPAPI({
-  endpoint: config.wordpress.apiBaseUrl,
-  username: config.wordpress.username,
-  password: config.wordpress.password,
-});
+// Helper function to create an axios instance with proper auth and configuration
+function createWpAxios(requiresAuth = true) {
+  const instance = axios.create({
+    baseURL: config.wordpress.apiEndpointUrl,
+    headers: {
+      "User-Agent": config.wordpress.userAgent,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    httpsAgent: new https.Agent({
+      rejectUnauthorized: false,
+    }),
+    timeout: 10000,
+  });
+
+  // Add authentication if required
+  if (requiresAuth && config.wordpress.username && config.wordpress.password) {
+    const base64Credentials = Buffer.from(
+      `${config.wordpress.username}:${config.wordpress.password}`
+    ).toString("base64");
+
+    instance.defaults.headers.common[
+      "Authorization"
+    ] = `Basic ${base64Credentials}`;
+  }
+
+  return instance;
+}
+
+// Create axios instances for authenticated and public requests
+const wpAuthApi = createWpAxios(true);
+const wpPublicApi = createWpAxios(false);
 
 /**
  * Find a page by its complete hierarchical path
@@ -37,7 +64,12 @@ async function findPageByFullPath(path) {
     );
 
     // Find all pages with this slug - there could be multiple with the same slug in different sections
-    const matchingPages = await wp.pages().param("slug", pageSlug).get();
+    const response = await wpPublicApi.get(`/wp/v2/pages`, {
+      params: {
+        slug: pageSlug,
+      },
+    });
+    const matchingPages = response.data;
 
     if (!matchingPages || matchingPages.length === 0) {
       logMessage(
@@ -67,7 +99,10 @@ async function findPageByFullPath(path) {
 
           try {
             // Get the parent page
-            const parent = await wp.pages().id(parentId).get();
+            const parentResponse = await wpPublicApi.get(
+              `/wp/v2/pages/${parentId}`
+            );
+            const parent = parentResponse.data;
 
             // Check if this parent's slug matches the expected path segment
             if (parent.slug !== pathSegments[i]) {

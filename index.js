@@ -12,6 +12,7 @@ const {
   updateParentPage,
   getParentPageSlug,
   processImage,
+  validateWordPressConnection,
 } = require("./src/postToWordpress");
 const {
   transformToWPBlocks,
@@ -522,6 +523,52 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
 // Main function to process URLs from the Google Sheet
 async function checkUrls(customUrls = null) {
   try {
+    // Validate WordPress connection before proceeding with migration
+    console.log("Validating WordPress connection before starting migration...");
+    try {
+      await validateWordPressConnection();
+      console.log(
+        "✅ WordPress connection validated successfully! Proceeding with migration."
+      );
+    } catch (wpError) {
+      console.error(
+        "❌ WordPress connection validation failed. Migration aborted."
+      );
+      console.error(wpError.message);
+
+      // Provide more specific guidance for 403 errors
+      if (wpError.message.includes("403")) {
+        console.error("\n🔍 SPECIFIC ADVICE FOR 403 ERRORS:");
+        console.error("1. Create an application password in WordPress admin:");
+        console.error(
+          "   - Go to Users → Profile → Application Passwords section"
+        );
+        console.error("   - Enter a name like 'Migration Script'");
+        console.error("   - Click 'Add New Application Password'");
+        console.error(
+          "   - Copy the generated password and use it in your .env file"
+        );
+        console.error(
+          "2. Check your WordPress site's .htaccess file for any restrictions"
+        );
+        console.error(
+          "3. Try a different user account with administrator privileges"
+        );
+        console.error(
+          "4. Temporarily disable security plugins like Wordfence, iThemes Security, etc."
+        );
+        console.error(
+          "5. Make sure the REST API is not blocked by WordPress settings or plugins"
+        );
+        console.error(
+          "\nRun the standalone validation tool for more detailed diagnostics:"
+        );
+        console.error("$ node checkWpConnection.js");
+      }
+
+      process.exit(1);
+    }
+
     const auth = await getAuthToken();
     let urls = customUrls || (await getUrlsFromSheet(auth));
 

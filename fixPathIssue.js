@@ -1,14 +1,41 @@
 // Path mismatch detector and fixer
 require("dotenv").config();
-const WPAPI = require("wpapi");
+const axios = require("axios");
+const https = require("https");
 const config = require("./src/config");
 
-// Initialize WordPress API client
-const wp = new WPAPI({
-  endpoint: config.wordpress.apiBaseUrl,
-  username: config.wordpress.username,
-  password: config.wordpress.password,
-});
+// Helper function to create an axios instance with proper auth and configuration
+function createWpAxios(requiresAuth = true) {
+  const instance = axios.create({
+    baseURL: config.wordpress.apiEndpointUrl,
+    headers: {
+      "User-Agent": config.wordpress.userAgent || "WordPress API Client",
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    httpsAgent: new https.Agent({
+      rejectUnauthorized: false,
+    }),
+    timeout: 10000,
+  });
+
+  // Add authentication if required
+  if (requiresAuth && config.wordpress.username && config.wordpress.password) {
+    const base64Credentials = Buffer.from(
+      `${config.wordpress.username}:${config.wordpress.password}`
+    ).toString("base64");
+
+    instance.defaults.headers.common[
+      "Authorization"
+    ] = `Basic ${base64Credentials}`;
+  }
+
+  return instance;
+}
+
+// Create axios instances for authenticated and public requests
+const wpAuthApi = createWpAxios(true);
+const wpPublicApi = createWpAxios(false);
 
 // Specific test paths
 const testPaths = [
@@ -42,8 +69,11 @@ async function findPageByExactPath(fullPath) {
   console.log(`Looking for final slug: ${finalSlug}`);
 
   try {
-    // Get all pages with the target slug
-    const pagesWithSlug = await wp.pages().slug(finalSlug);
+    // Get all pages with the target slug using Axios instead of WPAPI
+    const response = await wpPublicApi.get(`/wp/v2/pages`, {
+      params: { slug: finalSlug },
+    });
+    const pagesWithSlug = response.data;
     console.log(
       `Found ${pagesWithSlug?.length || 0} pages with slug "${finalSlug}"`
     );

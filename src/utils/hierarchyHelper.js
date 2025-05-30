@@ -15,18 +15,50 @@ async function createHierarchyLevel(slug, parentId) {
 
   if (parentId > 0) {
     try {
-      // Get the WordPress API instance from the main module
-      const WPAPI = require("wpapi");
+      // Use Axios instead of WPAPI for API calls
+      const axios = require("axios");
+      const https = require("https");
       const config = require("../config");
 
-      const wp = new WPAPI({
-        endpoint: config.wordpress.apiBaseUrl,
-        username: config.wordpress.username,
-        password: config.wordpress.password,
-      });
+      // Helper function to create an axios instance
+      function createWpAxios(requiresAuth = true) {
+        const instance = axios.create({
+          baseURL: config.wordpress.apiEndpointUrl,
+          headers: {
+            "User-Agent": config.wordpress.userAgent,
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          httpsAgent: new https.Agent({
+            rejectUnauthorized: false,
+          }),
+          timeout: 10000,
+        });
+
+        // Add authentication if required
+        if (
+          requiresAuth &&
+          config.wordpress.username &&
+          config.wordpress.password
+        ) {
+          const base64Credentials = Buffer.from(
+            `${config.wordpress.username}:${config.wordpress.password}`
+          ).toString("base64");
+
+          instance.defaults.headers.common[
+            "Authorization"
+          ] = `Basic ${base64Credentials}`;
+        }
+
+        return instance;
+      }
+
+      // Create axios instance for public API requests
+      const wpPublicApi = createWpAxios(false);
 
       // Get the parent page to determine its full path
-      const parentPage = await wp.pages().id(parentId).get();
+      const response = await wpPublicApi.get(`/wp/v2/pages/${parentId}`);
+      const parentPage = response.data;
 
       if (parentPage && parentPage.link) {
         // Extract the path from the URL

@@ -2,16 +2,43 @@
  * Utility to find WordPress pages by their full URLs or site paths
  */
 
-const WPAPI = require("wpapi");
+const axios = require("axios");
+const https = require("https");
 const config = require("../config");
 const { logMessage } = require("./logs");
 
-// Initialize WordPress API client
-const wp = new WPAPI({
-  endpoint: config.wordpress.apiBaseUrl,
-  username: config.wordpress.username,
-  password: config.wordpress.password,
-});
+// Helper function to create an axios instance with proper auth and configuration
+function createWpAxios(requiresAuth = true) {
+  const instance = axios.create({
+    baseURL: config.wordpress.apiEndpointUrl,
+    headers: {
+      "User-Agent": config.wordpress.userAgent,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    httpsAgent: new https.Agent({
+      rejectUnauthorized: false,
+    }),
+    timeout: 10000,
+  });
+
+  // Add authentication if required
+  if (requiresAuth && config.wordpress.username && config.wordpress.password) {
+    const base64Credentials = Buffer.from(
+      `${config.wordpress.username}:${config.wordpress.password}`
+    ).toString("base64");
+
+    instance.defaults.headers.common[
+      "Authorization"
+    ] = `Basic ${base64Credentials}`;
+  }
+
+  return instance;
+}
+
+// Create axios instances for authenticated and public requests
+const wpAuthApi = createWpAxios(true);
+const wpPublicApi = createWpAxios(false);
 
 /**
  * Find a page by its full URL or site path
@@ -36,16 +63,33 @@ async function findPageByLink(path) {
 
     let hasMorePages = true;
     while (hasMorePages) {
-      const pageResults = await wp
-        .pages()
-        .param("per_page", perPage)
-        .param("page", currentPage)
-        .get();
+      try {
+        const response = await wpPublicApi.get("/wp/v2/pages", {
+          params: {
+            per_page: perPage,
+            page: currentPage,
+          },
+        });
 
-      if (pageResults && pageResults.length > 0) {
-        allPages = allPages.concat(pageResults);
-        currentPage++;
-      } else {
+        const pageResults = response.data;
+
+        if (pageResults && pageResults.length > 0) {
+          allPages = allPages.concat(pageResults);
+          currentPage++;
+        } else {
+          hasMorePages = false;
+        }
+
+        // Check for total pages from headers
+        const totalPages = parseInt(response.headers["x-wp-totalpages"], 10);
+        if (!isNaN(totalPages) && currentPage > totalPages) {
+          hasMorePages = false;
+        }
+      } catch (err) {
+        logMessage(
+          `Error retrieving page ${currentPage}: ${err.message}`,
+          config.paths.createMenuLogFile
+        );
         hasMorePages = false;
       }
     }

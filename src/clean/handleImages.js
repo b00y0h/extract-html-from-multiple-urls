@@ -8,6 +8,16 @@ function handleImages($, rootUrl, mediaResults = []) {
     const caption = $(el).attr("data-caption") || "";
 
     if (src) {
+      // Skip SVG images completely
+      if (
+        src.toLowerCase().endsWith(".svg") ||
+        src.toLowerCase().includes(".svg?")
+      ) {
+        console.log(`⏩ Skipping SVG image: ${src}`);
+        $(el).remove();
+        return;
+      }
+
       // Handle different URL formats
       if (src.startsWith("/")) {
         src = `${rootUrl}${src}`;
