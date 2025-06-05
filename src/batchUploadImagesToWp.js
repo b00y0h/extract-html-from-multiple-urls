@@ -111,6 +111,26 @@ async function batchUploadImagesToWP(images, wpConfig) {
             `DEBUG: Response status: ${uploadError.response.status}`
           );
           console.error(`DEBUG: Response data:`, uploadError.response.data);
+
+          // Check if the error is related to file type restrictions
+          if (
+            uploadError.response.data &&
+            uploadError.response.data.message &&
+            uploadError.response.data.message.includes(
+              "not allowed to upload this file type"
+            )
+          ) {
+            console.error(
+              `FILE TYPE ERROR: File type "${path.extname(
+                fileName
+              )}" is not allowed for file "${fileName}" (Content-Type: ${contentType})`
+            );
+            logMessage(
+              `File type "${path.extname(
+                fileName
+              )}" is not allowed for file "${fileName}"`
+            );
+          }
         }
         throw uploadError;
       }

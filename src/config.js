@@ -24,7 +24,7 @@ module.exports = {
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36",
     username: process.env.WP_API_USERNAME,
     password: process.env.WP_API_PASSWORD,
-    rateLimitMs: 200, // 1 seconds between WordPress API requests
+    rateLimitMs: 1000, // 1 seconds between WordPress API requests
   },
 
   // URL configuration
