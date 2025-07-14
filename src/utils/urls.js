@@ -180,9 +180,26 @@ async function verifyParentHierarchy(url, action = "Move") {
     console.log(`Checking hierarchy level ${i + 1}: ${currentSlug}`);
     console.log(`Full path so far: ${currentHierarchyPath}`);
 
-    // Find the page at this level - this function now uses the cache internally
-    const pageId = await findPageBySlug(currentSlug, parentId);
+    // Try to find the page at this level with specific parent
+    let pageId = await findPageBySlug(currentSlug, parentId);
 
+    // If not found with specific parent, try to find any page with this slug (could be at root)
+    if (!pageId) {
+      console.log(
+        `No page found with slug "${currentSlug}" and parent ID ${parentId}. Trying to find any page with this slug...`
+      );
+      pageId = await findPageBySlug(currentSlug);
+
+      if (pageId) {
+        console.log(
+          `Found page "${currentSlug}" with ID: ${pageId} (but different parent)`
+        );
+        // When a page is found but with a different parent, it's still a valid page
+        // This handles cases where parent pages were created at the root level
+      }
+    }
+
+    // If still not found and we're creating pages, create it
     if (!pageId) {
       // If we're creating pages and a level doesn't exist, that's okay
       if (action === "Create") {

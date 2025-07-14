@@ -35,12 +35,17 @@ const {
 } = require("./src/utils/urls");
 const { logMessage } = require("./src/utils/logs");
 const { log } = require("console");
-const { clearCache } = require('./src/utils/pageCache');
+const { clearCache } = require("./src/utils/pageCache");
+const { syncCacheWithSpreadsheet } = require("./src/utils/cacheSync");
 // Load environment variables from a .env file if present
 require("dotenv").config();
 
 // Replace constants with config values
 const ERROR_URL_FILE = config.paths.errorUrlFile;
+const NOT_FOUND_URL_FILE = path.join(
+  path.dirname(ERROR_URL_FILE),
+  "not_found_url.txt"
+); // New file for 404 errors
 const CONCURRENCY_LIMIT = config.crawler.concurrencyLimit;
 const CRAWL_DELAY_MS = config.crawler.crawlDelayMs;
 const USER_AGENT = config.crawler.userAgent;
@@ -328,7 +333,7 @@ async function processContent(
 
     // Clean the slug
     const slug = computedUrl
-      .replace(/^(?:https?:\/\/)?(?:[^\/]+)/, "")
+      .replace(/^(?:https?:\/\/)?(?:www\.)?[^/]+\//, "")
       .replace(/^\/+|\/+$/g, "");
 
     const post = {
@@ -424,12 +429,14 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     if (hierarchyResult === null) {
       console.log(`⚠️ Skipping ${computedUrl} - parent hierarchy incomplete`);
       console.log(`🚀 PROCESSING END -------------------------\n`);
-      return { url: computedUrl, pageId: null };
+      return { url: computedUrl, pageId: null, missingParent: true };
     }
     console.log(`✅ Parent hierarchy verified`);
 
     // Check if the page already exists before attempting content fetch
-    const existingPage = await findPageBySlug(currentSlug);
+    // For deeper hierarchies, we need to check with the correct parent ID
+    const parentId = hierarchyResult; // This is the parent ID from hierarchy verification
+    const existingPage = await findPageBySlug(currentSlug, parentId);
     if (existingPage) {
       console.log(
         `✨ Page already exists with ID ${existingPage}, skipping content processing`
@@ -465,7 +472,7 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
       },
       maxRedirects: 10,
       validateStatus: function (status) {
-        return status >= 200 && status < 400;
+        return status >= 200 && status < 500; // Allow 404s to be handled in our code
       },
     };
 
@@ -481,6 +488,19 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
       `📥 Fetching content from URL: ${originalUrl.originalUrl || originalUrl}`
     );
     const contentResponse = await axios.get(urlToFetch, axiosConfig);
+
+    // Check for 404 response
+    if (contentResponse.status === 404) {
+      console.log(`⚠️ URL returned 404 (Not Found): ${urlToFetch}`);
+      logMessage(`404 Not Found: ${urlToFetch}\n`, ERROR_URL_FILE);
+      logMessage(`${urlToFetch}\n`, NOT_FOUND_URL_FILE); // Add to dedicated 404 log
+      return {
+        url: originalUrl.originalUrl || originalUrl,
+        pageId: null,
+        status: 404,
+      };
+    }
+
     console.log(`✅ Content fetched successfully`);
 
     // Process the fetched content
@@ -508,17 +528,34 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     logMessage(`${errorMessage}\n`, ERROR_URL_FILE);
     console.error(`💥 ${errorMessage}`);
 
+    // Check specifically for 404 errors
+    let status = null;
     if (error.response) {
-      let responseDetails = `Response status: ${error.response.status}`;
-      if (error.response.status !== 404) {
+      status = error.response.status;
+      let responseDetails = `Response status: ${status}`;
+      if (status !== 404) {
         responseDetails += `, data: ${JSON.stringify(error.response.data)}`;
+      } else {
+        console.log(
+          `⚠️ URL returned 404 (Not Found): ${
+            originalUrl.originalUrl || originalUrl
+          }`
+        );
+        logMessage(
+          `${originalUrl.originalUrl || originalUrl}\n`,
+          NOT_FOUND_URL_FILE
+        ); // Add to dedicated 404 log
       }
       console.error(`📉 ${responseDetails}`);
       logMessage(responseDetails);
     }
 
     console.log(`🚀 PROCESSING END (WITH ERROR) -------------------------\n`);
-    return { url: computedUrl, pageId: null };
+    return {
+      url: originalUrl.originalUrl || originalUrl,
+      pageId: null,
+      status: status,
+    };
   }
 }
 
@@ -594,6 +631,10 @@ async function checkUrls(customUrls = null) {
     // Combine the sorted groups
     urls = [...sortedPriorityUrls, ...sortedNonPriorityUrls];
 
+    // Pre-populate the page cache with data from the spreadsheet
+    // This helps avoid "Missing Parents" issues when parents already exist
+    await syncCacheWithSpreadsheet(urls);
+
     // Limit the number of URLs to process
     urls = urls.slice(0, URL_PROCESS_LIMIT);
 
@@ -609,8 +650,9 @@ async function checkUrls(customUrls = null) {
 
     let currentUrl = 0;
     const totalUrls = urls.length;
-    // Clear the error file
+    // Clear the error files
     fs.writeFileSync(ERROR_URL_FILE, "");
+    fs.writeFileSync(NOT_FOUND_URL_FILE, ""); // Initialize the 404 log file
 
     // Capture the start time
     const startTime = new Date();
@@ -639,6 +681,12 @@ async function checkUrls(customUrls = null) {
           )
             .then(async (result) => {
               stats.addResult(result);
+
+              // Track URLs with missing parents
+              if (result.missingParent) {
+                urlsMissingParents.push(urlData.computedUrl);
+              }
+
               if (result.pageId) {
                 await updateSheetWithTimestamp(
                   auth,
@@ -665,7 +713,7 @@ async function checkUrls(customUrls = null) {
     // Only generate the final report if we haven't been interrupted
     if (!isShuttingDown) {
       stats.generateReport();
-      
+
       // Clear the page cache to free up memory
       console.log("🧹 Clearing page cache...");
       clearCache();

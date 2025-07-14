@@ -9,6 +9,7 @@ images/
 mysql/
 wordpress/
 dist/
+not_found_url.txt
 # Logs
 
 logs

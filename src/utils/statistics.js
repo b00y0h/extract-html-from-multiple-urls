@@ -5,6 +5,7 @@ class ProcessingStats {
     this.processed = 0;
     this.successful = 0;
     this.errors = 0;
+    this.notFoundUrls = []; // Add array to track 404 errors
     this.urlsMissingParents = [];
     this.results = [];
     this.invalidParentPaths = new Set(); // Track paths with missing/invalid parents
@@ -36,10 +37,20 @@ class ProcessingStats {
     this.processed++;
     if (result.pageId) {
       this.successful++;
+    } else {
+      this.errors++;
     }
-    if (!result.pageId && result.url) {
+
+    // Track URLs with missing parents explicitly
+    if (result.missingParent && result.url) {
       this.urlsMissingParents.push(result.url);
     }
+
+    // Track 404 errors if provided
+    if (result.status === 404) {
+      this.notFoundUrls.push(result.url);
+    }
+
     this.results.push(result);
   }
 
@@ -48,6 +59,7 @@ class ProcessingStats {
     const elapsedTimeMs = endTime - this.startTime;
     const elapsedMinutes = Math.floor(elapsedTimeMs / 60000);
     const elapsedSeconds = Math.floor((elapsedTimeMs % 60000) / 1000);
+    const duration = (endTime - this.startTime) / 1000; // in seconds
 
     console.log("\n----------------------------------------");
     console.log(
@@ -63,6 +75,17 @@ class ProcessingStats {
     console.log(`Skipped child paths: ${this.skippedChildPaths.size}`);
     console.log(`URLs missing parents: ${this.urlsMissingParents.length}`);
     console.log(`Time elapsed: ${elapsedMinutes}m ${elapsedSeconds}s`);
+    console.log(
+      `Success rate: ${((this.successful / this.processed) * 100).toFixed(2)}%`
+    );
+
+    // Add 404 error URLs to the report
+    if (this.notFoundUrls.length > 0) {
+      console.log("\n⚠️ URLs returning 404 (Not Found):");
+      this.notFoundUrls.forEach((url, index) => {
+        console.log(`${index + 1}. ${url}`);
+      });
+    }
 
     console.log("\nPath Processing Stats:");
     console.log(`Invalid Parent Paths: ${this.invalidParentPaths.size}`);
