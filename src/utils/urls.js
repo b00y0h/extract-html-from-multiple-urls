@@ -2,6 +2,7 @@ const path = require("path");
 const fs = require("fs");
 const config = require("../config");
 const { findPageBySlug } = require("../postToWordpress");
+const { getPageFromCache } = require("./pageCache");
 
 // Extract the root URL (protocol and host) from a given URL
 function getRootUrl(url) {
@@ -179,7 +180,7 @@ async function verifyParentHierarchy(url, action = "Move") {
     console.log(`Checking hierarchy level ${i + 1}: ${currentSlug}`);
     console.log(`Full path so far: ${currentHierarchyPath}`);
 
-    // Find the page at this level
+    // Find the page at this level - this function now uses the cache internally
     const pageId = await findPageBySlug(currentSlug, parentId);
 
     if (!pageId) {
@@ -195,9 +196,12 @@ async function verifyParentHierarchy(url, action = "Move") {
         parentId = createdPageId;
       } else {
         // For Move action, we need the entire hierarchy to exist
-        throw new Error(
-          `Page "${currentSlug}" at path "${currentHierarchyPath}" not found. Cannot create child page.`
+        console.log(
+          `❌ Parent hierarchy incomplete: missing level ${
+            i + 1
+          } "${currentSlug}"`
         );
+        return null;
       }
     } else {
       console.log(`Found page "${currentSlug}" with ID: ${pageId}`);

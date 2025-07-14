@@ -6,6 +6,12 @@ const config = require("./config");
 const { batchUploadImagesToWP } = require("./batchUploadImagesToWp");
 const path = require("path");
 const { logMessage } = require("./utils/logs");
+const {
+  getPageFromCache,
+  cachePage,
+  cachePages,
+  getPathFromCache,
+} = require("./utils/pageCache");
 
 // Helper function to create an axios instance with proper auth and configuration
 function createWpAxios(requiresAuth = true) {
@@ -673,17 +679,31 @@ async function updateParentPage(pageId, parentPageId) {
 
 // Function to find a WordPress page by slug
 async function findPageBySlug(slug, parentId = null) {
+  // Normalize the slug and parent ID for consistency
+  const normalizedSlug = slug.toLowerCase().trim();
+  const normalizedParentId = parentId !== null ? parentId : 0;
+
   console.log("\n[FIND PAGE] ---------------------");
   console.log(`Searching for page with slug: ${slug}`);
-  if (parentId !== null) {
-    console.log(`With parent ID: ${parentId}`);
+  if (normalizedParentId !== 0) {
+    console.log(`With parent ID: ${normalizedParentId}`);
   }
 
-  try {
-    // Normalize the slug to ensure consistent matching
-    const normalizedSlug = slug.toLowerCase().trim();
+  // Check cache first
+  const cachedPageId = getPageFromCache(normalizedSlug, normalizedParentId);
+  if (cachedPageId) {
+    console.log(
+      `✅ CACHE HIT: Found page "${slug}" with ID: ${cachedPageId} in cache`
+    );
+    return cachedPageId;
+  }
 
-    // Get all pages with this slug first - use public API since this is a read operation
+  console.log(
+    `❌ CACHE MISS: Page "${slug}" with parent ${normalizedParentId} not in cache, fetching from WordPress`
+  );
+
+  try {
+    // Get all pages with this slug - use public API since this is a read operation
     const response = await wpPublicApi.get(
       `/wp/v2/pages?slug=${normalizedSlug}`
     );
@@ -693,28 +713,33 @@ async function findPageBySlug(slug, parentId = null) {
       `Found ${matchingPages?.length || 0} pages with slug "${slug}"`
     );
 
+    // Cache all matching pages to avoid future API calls
+    if (matchingPages && matchingPages.length > 0) {
+      cachePages(matchingPages);
+    }
+
     if (!matchingPages || matchingPages.length === 0) {
       console.log(`No existing page found with slug: ${slug}`);
       return null;
     }
 
     // If parentId is specified, find a page with the exact parent
-    if (parentId !== null) {
-      console.log(`Looking for page with parent ID: ${parentId}`);
+    if (normalizedParentId !== 0) {
+      console.log(`Looking for page with parent ID: ${normalizedParentId}`);
 
       // Find the page with the matching parent
       const pageWithMatchingParent = matchingPages.find(
-        (page) => page.parent === parentId
+        (page) => page.parent === normalizedParentId
       );
 
       if (pageWithMatchingParent) {
         console.log(
-          `Found page with ID: ${pageWithMatchingParent.id} and matching parent ID: ${parentId}`
+          `Found page with ID: ${pageWithMatchingParent.id} and matching parent ID: ${normalizedParentId}`
         );
         return pageWithMatchingParent.id;
       } else {
         console.log(
-          `No page found with slug "${slug}" and parent ID: ${parentId}`
+          `No page found with slug "${slug}" and parent ID: ${normalizedParentId}`
         );
 
         // Display all found pages for debugging
@@ -861,6 +886,19 @@ async function findPageByPath(fullPath) {
 async function getParentPagePath(pageId) {
   console.log(`Getting full path for page ID: ${pageId}`);
 
+  // Check if we have the complete path in cache
+  const cachedPath = getPathFromCache(pageId);
+  if (cachedPath) {
+    console.log(
+      `✅ CACHE HIT: Path for page ID ${pageId} found in cache: ${cachedPath}`
+    );
+    return cachedPath;
+  }
+
+  console.log(
+    `❌ CACHE MISS: Path for page ID ${pageId} not in cache, fetching from WordPress`
+  );
+
   try {
     // Apply rate limiting
     await sleep(config.wordpress.rateLimitMs);
@@ -868,6 +906,9 @@ async function getParentPagePath(pageId) {
     // Get the page details using Axios instead of WPAPI
     const response = await wpPublicApi.get(`/wp/v2/pages/${pageId}`);
     const page = response.data;
+
+    // Cache the page for future use
+    cachePage(page);
 
     if (!page) {
       console.log(`No page found with ID: ${pageId}`);

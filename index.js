@@ -35,6 +35,7 @@ const {
 } = require("./src/utils/urls");
 const { logMessage } = require("./src/utils/logs");
 const { log } = require("console");
+const { clearCache } = require('./src/utils/pageCache');
 // Load environment variables from a .env file if present
 require("dotenv").config();
 
@@ -664,6 +665,10 @@ async function checkUrls(customUrls = null) {
     // Only generate the final report if we haven't been interrupted
     if (!isShuttingDown) {
       stats.generateReport();
+      
+      // Clear the page cache to free up memory
+      console.log("🧹 Clearing page cache...");
+      clearCache();
     }
   } catch (error) {
     console.error("Error:", error);
