@@ -508,9 +508,10 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     console.error(`💥 ${errorMessage}`);
 
     if (error.response) {
-      const responseDetails = `Response status: ${
-        error.response.status
-      }, data: ${JSON.stringify(error.response.data)}`;
+      let responseDetails = `Response status: ${error.response.status}`;
+      if (error.response.status !== 404) {
+        responseDetails += `, data: ${JSON.stringify(error.response.data)}`;
+      }
       console.error(`📉 ${responseDetails}`);
       logMessage(responseDetails);
     }

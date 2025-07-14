@@ -1,0 +1,274 @@
+[2025-06-05T14:03:16.031Z] 
+=== FORM FOUND ===
+Page URL: https://library.vancouver.wsu.edu
+WordPress Destination URL: /academics/library
+Form Action: undefined
+Form Method: get
+Form ID: 
+Form Fields:
+==================
+
+[2025-06-05T14:12:28.139Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+WordPress Destination URL: /admission/registration-records/request-student-record-data
+Form Action: /registrars-office/request-student-record-data
+Form Method: post
+Form ID: webform-submission-student-record-request-form-node-803-add-form
+Form Fields:
+  - text: first_name
+  - text: middle_initial
+  - text: last_name
+  - email: email
+  - text: department_organization
+  - textarea: purpose
+  - checkbox: data_name_format[columns]
+  - checkbox: data_name_format[single_cell]
+  - checkbox: data_address_contact_info[address_local]
+  - checkbox: data_address_contact_info[address_permanent]
+  - checkbox: data_address_contact_info[phone]
+  - checkbox: data_address_contact_info[email]
+  - checkbox: data_class_standing[freshman]
+  - checkbox: data_class_standing[sophomore]
+  - checkbox: data_class_standing[junior]
+  - checkbox: data_class_standing[senior]
+  - checkbox: data_class_standing[post_bachelor]
+  - checkbox: data_class_standing[graduate]
+  - checkbox: data_class_standing[non_degree]
+  - checkbox: data_student_type[prospect]
+  - checkbox: data_student_type[applicant]
+  - checkbox: data_student_type[current]
+  - checkbox: data_student_type[former]
+  - select: major
+  - textarea: specific_majors
+  - text: snapshot_year
+  - select: snapshot_term
+  - checkbox: snapshot_date[first_day]
+  - checkbox: snapshot_date[census_day]
+  - checkbox: snapshot_date[30th_day]
+  - checkbox: snapshot_date[current_date]
+  - text: degree_conferred_year
+  - select: degree_conferred_term
+  - text: degree_applied_year
+  - select: degree_applied_term
+  - textarea: additional_information_not_noted
+  - date: data_delivery_date
+  - checkbox: data_report_format[checkboxes][excel]
+  - checkbox: data_report_format[checkboxes][pdf]
+  - checkbox: data_report_format[checkboxes][txt]
+  - checkbox: data_report_format[checkboxes][csv]
+  - checkbox: data_report_format[checkboxes][_other_]
+  - text: data_report_format[other]
+  - checkbox: i_agree
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-06-05T14:12:38.655Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+WordPress Destination URL: /admission/visit-connect/request-ambassador
+Form Action: /admissions/request-ambassador
+Form Method: post
+Form ID: webform-submission-ambassador-request-form-node-804-add-form
+Form Fields:
+  - textarea: event_description
+  - textarea: event_preparation
+  - text: event_location
+  - select: event_date[month]
+  - select: event_date[day]
+  - select: event_date[year]
+  - text: what_time_does_the_event_start_
+  - text: what_time_does_the_event_end_
+  - text: what_time_ambassador_arrive
+  - text: what_time_ambassador_leave
+  - textarea: ambassador_duties
+  - text: ambassadors_needed
+  - textarea: ambassador_arrival_meet_location
+  - textarea: ambassador_transportation
+  - text: event_contact_name
+  - text: phone
+  - email: email
+  - textarea: additional_information_requests
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-06-05T14:13:18.407Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+WordPress Destination URL: /student-life-and-support/access-center/closed-captioning-request
+Form Action: /access-center/closed-captioning-request
+Form Method: post
+Form ID: webform-submission-closed-captioning-request-form-node-811-add-form
+Form Fields:
+  - text: instructor_first_name
+  - text: instructor_last_name
+  - email: instructor_email
+  - text: course
+  - select: term
+  - text: year
+  - textarea: materials_due_dates
+  - select: primary_purpose
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-06-05T14:20:41.285Z] 
+=== FORM FOUND ===
+Page URL: https://www.vancouver.wsu.edu
+WordPress Destination URL: /about/departments/public-safety/annual-security-report
+Form Action: /safety/annual-security-report
+Form Method: get
+Form ID: views-exposed-form-annual-security-report-page-1
+Form Fields:
+  - select: tid
+==================
+
+[2025-06-05T14:45:40.043Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+WordPress Destination URL: /student-life-and-support/access-center/accommodations/event-accommodation-request
+Form Action: /event-accommodation-request
+Form Method: post
+Form ID: webform-submission-event-accommodation-request-node-3655-add-form
+Form Fields:
+  - text: first_name
+  - text: last_name
+  - email: email
+  - text: phone
+  - select: contact_preference
+  - text: event_title
+  - date: event_date_
+  - time: start_time_
+  - time: event_end_time
+  - text: event_sponsor_presenter
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Wheelchair accessibility]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Special furniture]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Reserved Preferential Seating]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Need space for service animal]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Dietary restrictions]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Electrical power source for charging batteries for assistive devices]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Assistive listening devices]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Sign language interpreter]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Real-time captioning (CART)]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Access to PowerPoint or presentation materials in advance]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Sighted guides for assistance to and from specific sessions]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Large print]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Materials in digital format]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Materials in paper format]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][Braille]
+  - checkbox: please_indicate_if_you_require_any_of_the_following_accommodatio[checkboxes][_other_]
+  - textarea: please_indicate_if_you_require_any_of_the_following_accommodatio[other]
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-06-05T14:46:32.320Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+WordPress Destination URL: /student-life-and-support/basic-needs/housing/submit-housing-bulletin-board-listing
+Form Action: /submit-housing-bulletin-board-listing
+Form Method: post
+Form ID: webform-submission-housing-bulletin-board-submissio-node-818-add-form
+Form Fields:
+  - text: listing_title
+  - textarea: listing_description
+  - text: first_name
+  - text: last_name
+  - email: email
+  - text: phone
+  - checkbox: displayed_contact_information[first_name]
+  - checkbox: displayed_contact_information[email]
+  - checkbox: displayed_contact_information[phone]
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-06-05T14:46:35.334Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+WordPress Destination URL: /student-life-and-support/career-services/career-readiness-support/request-additional-support
+Form Action: /career-services/request-additional-support
+Form Method: post
+Form ID: webform-submission-barrier-to-employment-node-4024-add-form
+Form Fields:
+  - text: first_name
+  - text: last_name
+  - email: email
+  - text: wsu_id
+  - textarea: please_describe_the_obstacles_that_are_preventing_you_from_achie
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-06-05T14:46:44.049Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+WordPress Destination URL: /student-life-and-support/career-services/for-employers/campus-student-employment-job-template-form
+Form Action: /career-services/campus-student-employment-job-template-form
+Form Method: post
+Form ID: webform-submission-on-campus-student-employment-job-node-3803-add-form
+Form Fields:
+  - text: first_name
+  - text: last_name
+  - email: email
+  - text: phone
+  - text: where_apply
+  - text: job_title
+  - text: company_division
+  - text: job_type
+  - text: duration
+  - text: start_date
+  - text: job_end_date
+  - text: work_study_students_only
+  - text: application_open_date
+  - text: application_close_date
+  - textarea: job_description
+  - text: number_openings
+  - text: location
+  - text: salary
+  - text: documents
+  - text: minimum_gpa
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-06-05T14:46:44.993Z] 
+=== FORM FOUND ===
+Page URL: https://studentaffairs.vancouver.wsu.edu
+WordPress Destination URL: /student-life-and-support/career-services/for-employers/career-presentation-request-form
+Form Action: /career-services/career-presentation-request-form
+Form Method: post
+Form ID: webform-submission-career-presentation-request-node-3897-add-form
+Form Fields:
+  - text: first_name
+  - text: last_name
+  - email: email
+  - text: phone
+  - text: audience
+  - text: date_time
+  - checkbox: subject[checkboxes][resume_coverletter]
+  - checkbox: subject[checkboxes][networking]
+  - checkbox: subject[checkboxes][linkedin]
+  - checkbox: subject[checkboxes][interviewing]
+  - checkbox: subject[checkboxes][salary]
+  - checkbox: subject[checkboxes][career_exploration]
+  - checkbox: subject[checkboxes][_other_]
+  - text: subject[other]
+  - textarea: looking_for
+  - hidden: form_build_id
+  - hidden: form_id
+==================
+
+[2025-07-14T13:53:11.144Z] 
+=== FORM FOUND ===
+Page URL: https://www.vancouver.wsu.edu
+WordPress Destination URL: /about/departments/public-safety/annual-security-report
+Form Action: /safety/annual-security-report
+Form Method: get
+Form ID: views-exposed-form-annual-security-report-page-1
+Form Fields:
+  - select: tid
+==================
+

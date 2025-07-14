@@ -56,9 +56,12 @@ services:
       - WP_CLI_PROTOCOL=http
       - WP_CLI_DOMAIN=localhost
       - WP_ENVIRONMENT_TYPE=local
+      - WORDPRESS_ADMIN_EMAIL=${WORDPRESS_ADMIN_EMAIL}
+      - WORDPRESS_ADMIN_USER=${WORDPRESS_ADMIN_USER:-wordpress}
+      - WORDPRESS_ADMIN_PASSWORD=${WORDPRESS_ADMIN_PASSWORD:-wordpress}
     command: >
       /bin/sh -c '
-      until mysqladmin ping -h$$WORDPRESS_DB_HOST -u$$WORDPRESS_DB_USER -p$$WORDPRESS_DB_PASSWORD --silent; do
+      until mariadb-admin ping -h$$WORDPRESS_DB_HOST -u$$WORDPRESS_DB_USER -p$$WORDPRESS_DB_PASSWORD --silent; do
         sleep 1
         echo "Waiting for MySQL to be ready..."
       done &&
@@ -66,8 +69,8 @@ services:
       wp core install 
       --url=http://localhost 
       --title=Example 
-      --admin_user=supervisor 
-      --admin_password=strongpassword 
-      --admin_email=info@example.com'
+      --admin_user=$$WORDPRESS_ADMIN_USER 
+      --admin_password=$$WORDPRESS_ADMIN_PASSWORD 
+      --admin_email=$$WORDPRESS_ADMIN_EMAIL'
       && wp option update permalink_structure '/%postname%/'
   # Check availability of essential services

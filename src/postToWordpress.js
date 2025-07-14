@@ -61,7 +61,7 @@ console.log(
  */
 async function validateWordPressConnection() {
   console.log("\n[VALIDATING WORDPRESS CONNECTION] ---------------------");
-  console.log(`Checking connection to: ${config.wordpress.apiBaseUrl}`);
+  console.log(`Checking connection to: ${config.wordpress.baseUrl}`);
   console.log(`Username: ${config.wordpress.username}`);
   console.log(
     `Password: ${config.wordpress.password ? "********" : "[NOT SET]"}`
@@ -81,10 +81,8 @@ async function validateWordPressConnection() {
 
   // First check if the WordPress site is reachable at all (without auth)
   try {
-    console.log(
-      `Testing if site is reachable at: ${config.wordpress.apiBaseUrl}`
-    );
-    const basicResponse = await axios.get(config.wordpress.apiBaseUrl, {
+    console.log(`Testing if site is reachable at: ${config.wordpress.baseUrl}`);
+    const basicResponse = await axios.get(config.wordpress.baseUrl, {
       headers: {
         "User-Agent": config.wordpress.userAgent,
       },
@@ -690,11 +688,6 @@ async function findPageBySlug(slug, parentId = null) {
       `/wp/v2/pages?slug=${normalizedSlug}`
     );
     const matchingPages = response.data;
-
-    console.log(
-      "🚀🚀🚀🚀🚀🚀 ~ findPageBySlug ~ matchingPages:",
-      matchingPages
-    );
 
     console.log(
       `Found ${matchingPages?.length || 0} pages with slug "${slug}"`

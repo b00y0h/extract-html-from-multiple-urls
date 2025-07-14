@@ -7,6 +7,29 @@ class ProcessingStats {
     this.errors = 0;
     this.urlsMissingParents = [];
     this.results = [];
+    this.invalidParentPaths = new Set(); // Track paths with missing/invalid parents
+    this.skippedChildPaths = new Set(); // Track paths skipped due to invalid parents
+  }
+
+  addInvalidParentPath(path) {
+    // Normalize path by removing leading/trailing slashes
+    const normalizedPath = path.replace(/^\/+|\/+$/g, "");
+    this.invalidParentPaths.add(normalizedPath);
+    return this; // Allow chaining
+  }
+
+  isChildOfInvalidParent(path) {
+    // Normalize path by removing leading/trailing slashes
+    const normalizedPath = path.replace(/^\/+|\/+$/g, "");
+
+    // Check if any invalid parent path is a prefix of this path
+    for (const invalidPath of this.invalidParentPaths) {
+      if (normalizedPath.startsWith(invalidPath + "/")) {
+        this.skippedChildPaths.add(normalizedPath);
+        return true;
+      }
+    }
+    return false;
   }
 
   addResult(result) {
@@ -33,26 +56,36 @@ class ProcessingStats {
         : "📊 Final Report:"
     );
     console.log("----------------------------------------");
-    console.log(`Total URLs to process: ${this.totalUrls}`);
-    console.log(`URLs processed: ${this.processed}`);
-    console.log(`Pages successfully created: ${this.successful}`);
-    console.log(`URLs with errors: ${this.errors}`);
+    console.log(`Total URLs processed: ${this.processed}/${this.totalUrls}`);
+    console.log(`Successful: ${this.successful}`);
+    console.log(`Failed/Skipped: ${this.processed - this.successful}`);
+    console.log(`Invalid parent paths: ${this.invalidParentPaths.size}`);
+    console.log(`Skipped child paths: ${this.skippedChildPaths.size}`);
     console.log(`URLs missing parents: ${this.urlsMissingParents.length}`);
+    console.log(`Time elapsed: ${elapsedMinutes}m ${elapsedSeconds}s`);
+
+    console.log("\nPath Processing Stats:");
+    console.log(`Invalid Parent Paths: ${this.invalidParentPaths.size}`);
+    console.log(`Skipped Child Paths: ${this.skippedChildPaths.size}`);
+    if (this.invalidParentPaths.size > 0) {
+      console.log("\nInvalid Parent Paths:");
+      for (const path of this.invalidParentPaths) {
+        console.log(`  - ${path}`);
+      }
+    }
+    if (this.skippedChildPaths.size > 0) {
+      console.log("\nSkipped Child Paths:");
+      for (const path of this.skippedChildPaths) {
+        console.log(`  - ${path}`);
+      }
+    }
 
     if (this.urlsMissingParents.length > 0) {
-      console.log("\nURLs that didn't get uploaded due to missing parents:");
-      this.urlsMissingParents.forEach((url) => console.log(`- ${url}`));
+      console.log("\nURLs Missing Parents:");
+      for (const url of this.urlsMissingParents) {
+        console.log(`  - ${url}`);
+      }
     }
-
-    console.log("\n⏱️  Time Statistics:");
-    if (elapsedMinutes > 0) {
-      console.log(
-        `Total processing time: ${elapsedMinutes}m ${elapsedSeconds}s`
-      );
-    } else {
-      console.log(`Total processing time: ${elapsedSeconds}s`);
-    }
-    console.log("----------------------------------------\n");
   }
 }
 
