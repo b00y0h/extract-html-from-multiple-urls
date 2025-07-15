@@ -46,6 +46,10 @@ const NOT_FOUND_URL_FILE = path.join(
   path.dirname(ERROR_URL_FILE),
   "not_found_url.txt"
 ); // New file for 404 errors
+const MISSING_PARENTS_FILE = path.join(
+  path.dirname(ERROR_URL_FILE),
+  "missing_parents.txt"
+); // New file for URLs with missing parents
 const CONCURRENCY_LIMIT = config.crawler.concurrencyLimit;
 const CRAWL_DELAY_MS = config.crawler.crawlDelayMs;
 const USER_AGENT = config.crawler.userAgent;
@@ -186,7 +190,9 @@ async function processContent(
   console.log(`\n🔄 CONTENT PROCESSING START ---------------------`);
   console.log(`📝 Processing content for: ${computedUrl}`);
   console.log(`🎯 Action: ${action}`);
-  if (!contentResponse || action === "Create") {
+
+  // Only use dummy content for "Create" action, not for "Move"
+  if (!contentResponse && action === "Create") {
     console.log(`Creating page with dummy content for action: ${action}`);
     const pathSegments = computedUrl.split("/").filter(Boolean);
     const slug = pathSegments[pathSegments.length - 1];
@@ -201,7 +207,12 @@ async function processContent(
 
     // Post the dummy content to WordPress
     console.log(`📤 Sending to WordPress...`);
-    const result = await postToWordPress(computedUrl, dummyContent, title);
+    const result = await postToWordPress(
+      computedUrl,
+      dummyContent,
+      title,
+      action
+    );
     const pageId = result.pageId;
 
     if (pageId) {
@@ -353,7 +364,8 @@ async function processContent(
     const result = await postToWordPress(
       computedUrl,
       transformedToWPContent,
-      pageTitle
+      pageTitle,
+      action // Pass the action parameter
     );
 
     const pageId = result.pageId;
@@ -420,12 +432,12 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     console.log(`📚 Path segments:`, pathSegments);
     console.log(`🏷️  Current slug: ${currentSlug}`);
 
-    // Verify parent hierarchy
+    // Verify parent hierarchy using the enhanced system
     console.log(`🔍 Verifying parent hierarchy...`);
-    const hierarchyResult = await verifyParentHierarchy(
-      computedUrl,
-      originalUrl.action || "Move"
-    );
+    const action =
+      typeof originalUrl === "object" ? originalUrl.action : "Move";
+    const hierarchyResult = await verifyParentHierarchy(computedUrl, action);
+
     if (hierarchyResult === null) {
       console.log(`⚠️ Skipping ${computedUrl} - parent hierarchy incomplete`);
       console.log(`🚀 PROCESSING END -------------------------\n`);
@@ -433,8 +445,7 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     }
     console.log(`✅ Parent hierarchy verified`);
 
-    // Check if the page already exists before attempting content fetch
-    // For deeper hierarchies, we need to check with the correct parent ID
+    // Check if the page already exists with the correct parent
     const parentId = hierarchyResult; // This is the parent ID from hierarchy verification
     const existingPage = await findPageBySlug(currentSlug, parentId);
     if (existingPage) {
@@ -445,8 +456,6 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     }
 
     // For Create action, skip content fetching
-    const action =
-      typeof originalUrl === "object" ? originalUrl.action : "Move";
     if (action === "Create") {
       console.log("🔄 Create action - processing with dummy content");
       const result = await processContent(
@@ -625,34 +634,94 @@ async function checkUrls(customUrls = null) {
     const nonPriorityUrls = urls.filter((url) => !url.processFirst);
 
     // Sort each group by hierarchy
-    const sortedPriorityUrls = sortUrlsByHierarchy(priorityUrls);
-    const sortedNonPriorityUrls = sortUrlsByHierarchy(nonPriorityUrls);
+    const priorityHierarchy = sortUrlsByHierarchy(priorityUrls);
+    const nonPriorityHierarchy = sortUrlsByHierarchy(nonPriorityUrls);
 
-    // Combine the sorted groups
-    urls = [...sortedPriorityUrls, ...sortedNonPriorityUrls];
+    // Create a single urlsByLevel object combining both priority and non-priority
+    const urlsByLevel = {};
+    let maxLevel = Math.max(
+      priorityHierarchy.maxLevel,
+      nonPriorityHierarchy.maxLevel
+    );
+
+    // Populate the combined level map starting with priority URLs
+    for (let level = 0; level <= maxLevel; level++) {
+      urlsByLevel[level] = [];
+
+      // Add priority URLs for this level first (if any)
+      if (priorityHierarchy.urlsByLevel[level]) {
+        urlsByLevel[level].push(...priorityHierarchy.urlsByLevel[level]);
+      }
+
+      // Then add non-priority URLs for this level
+      if (nonPriorityHierarchy.urlsByLevel[level]) {
+        urlsByLevel[level].push(...nonPriorityHierarchy.urlsByLevel[level]);
+      }
+    }
+
+    // Flatten into a single array for backwards compatibility, though we'll use urlsByLevel directly
+    const sortedUrls = [];
+    for (let level = 0; level <= maxLevel; level++) {
+      if (urlsByLevel[level]) {
+        sortedUrls.push(...urlsByLevel[level]);
+      }
+    }
 
     // Pre-populate the page cache with data from the spreadsheet
     // This helps avoid "Missing Parents" issues when parents already exist
-    await syncCacheWithSpreadsheet(urls);
+    await syncCacheWithSpreadsheet(sortedUrls);
 
-    // Limit the number of URLs to process
-    urls = urls.slice(0, URL_PROCESS_LIMIT);
+    // Limit the number of URLs to process if needed
+    if (URL_PROCESS_LIMIT < sortedUrls.length) {
+      console.log(`⚠️ Limiting processing to first ${URL_PROCESS_LIMIT} URLs`);
 
-    console.log("\n📊 URL Processing Order:");
-    urls.forEach((url, index) => {
-      const depth = (url.computedUrl.match(/\//g) || []).length;
-      const priority = url.processFirst ? "🔥 PRIORITY" : "  Regular";
-      console.log(
-        `${index + 1}. ${priority} ${"  ".repeat(depth)}${url.computedUrl}`
-      );
-    });
+      // Limit while maintaining hierarchical integrity
+      const limitedUrls = [];
+      let count = 0;
+
+      for (
+        let level = 0;
+        level <= maxLevel && count < URL_PROCESS_LIMIT;
+        level++
+      ) {
+        if (urlsByLevel[level]) {
+          const levelUrls = urlsByLevel[level].slice(
+            0,
+            URL_PROCESS_LIMIT - count
+          );
+          limitedUrls.push(...levelUrls);
+          count += levelUrls.length;
+
+          // Update urlsByLevel to match our limit
+          urlsByLevel[level] = levelUrls;
+        }
+      }
+
+      // Update the sortedUrls array for backwards compatibility
+      sortedUrls.length = 0;
+      sortedUrls.push(...limitedUrls);
+    }
+
+    console.log("\n📊 URL Processing Plan - Strict Hierarchical Order:");
+    for (let level = 0; level <= maxLevel; level++) {
+      if (urlsByLevel[level] && urlsByLevel[level].length > 0) {
+        console.log(
+          `\n📑 LEVEL ${level} URLS (${urlsByLevel[level].length} pages):`
+        );
+        urlsByLevel[level].forEach((url, index) => {
+          const priority = url.processFirst ? "🔥 PRIORITY" : "  Regular";
+          console.log(`  ${index + 1}. ${priority} ${url.computedUrl}`);
+        });
+      }
+    }
     console.log("\n");
 
     let currentUrl = 0;
-    const totalUrls = urls.length;
+    const totalUrls = sortedUrls.length;
     // Clear the error files
     fs.writeFileSync(ERROR_URL_FILE, "");
     fs.writeFileSync(NOT_FOUND_URL_FILE, ""); // Initialize the 404 log file
+    fs.writeFileSync(MISSING_PARENTS_FILE, ""); // Initialize the missing parents log file
 
     // Capture the start time
     const startTime = new Date();
@@ -660,56 +729,97 @@ async function checkUrls(customUrls = null) {
     // Track URLs that didn't get uploaded due to missing parents
     const urlsMissingParents = [];
 
-    // Process URLs with a limited number of concurrent requests
+    // Process levels sequentially, completing each level before moving to the next
     const results = [];
-    const processQueue = async () => {
-      if (urls.length === 0 || isShuttingDown) return;
 
-      const activeRequests = [];
-      while (
-        activeRequests.length < CONCURRENCY_LIMIT &&
-        urls.length > 0 &&
-        !isShuttingDown
-      ) {
-        const urlData = urls.shift();
-        activeRequests.push(
-          fetchUrl(
-            urlData.originalUrl,
-            urlData.computedUrl,
-            ++currentUrl,
-            totalUrls
-          )
-            .then(async (result) => {
-              stats.addResult(result);
+    // Process URLs one level at a time with concurrency within each level
+    const processLevelQueue = async () => {
+      for (let level = 0; level <= maxLevel; level++) {
+        if (!urlsByLevel[level] || urlsByLevel[level].length === 0) {
+          console.log(`\n⏩ Skipping LEVEL ${level} - no URLs to process`);
+          continue;
+        }
 
-              // Track URLs with missing parents
-              if (result.missingParent) {
-                urlsMissingParents.push(urlData.computedUrl);
-              }
-
-              if (result.pageId) {
-                await updateSheetWithTimestamp(
-                  auth,
-                  urlData.rowNumber,
-                  result.pageId
-                );
-              }
-            })
-            .catch((error) => {
-              stats.errors++;
-              console.error(`Error processing ${urlData.computedUrl}:`, error);
-            })
+        console.log(
+          `\n🔄 PROCESSING LEVEL ${level} URLS (${urlsByLevel[level].length} pages):`
         );
-        await new Promise((resolve) => setTimeout(resolve, CRAWL_DELAY_MS));
-      }
 
-      await Promise.all(activeRequests);
-      if (!isShuttingDown) {
-        await processQueue();
+        const levelUrls = [...urlsByLevel[level]]; // Create a copy to avoid modifying the original
+        let levelSuccessCount = 0;
+        let levelErrorCount = 0;
+        let levelMissingParentsCount = 0;
+
+        // Process this level with concurrency
+        while (levelUrls.length > 0 && !isShuttingDown) {
+          const activeRequests = [];
+
+          while (
+            activeRequests.length < CONCURRENCY_LIMIT &&
+            levelUrls.length > 0 &&
+            !isShuttingDown
+          ) {
+            const urlData = levelUrls.shift();
+            activeRequests.push(
+              fetchUrl(
+                urlData.originalUrl,
+                urlData.computedUrl,
+                ++currentUrl,
+                totalUrls
+              )
+                .then(async (result) => {
+                  stats.addResult(result);
+
+                  // Track level-specific statistics
+                  if (result.pageId) {
+                    levelSuccessCount++;
+                  } else if (result.missingParent) {
+                    levelMissingParentsCount++;
+                  } else {
+                    levelErrorCount++;
+                  }
+
+                  // Track URLs with missing parents
+                  if (result.missingParent) {
+                    urlsMissingParents.push(urlData.computedUrl);
+                    // Log to missing parents file for later reprocessing
+                    fs.appendFileSync(
+                      MISSING_PARENTS_FILE,
+                      `${urlData.computedUrl}\n`
+                    );
+                  }
+
+                  if (result.pageId) {
+                    await updateSheetWithTimestamp(
+                      auth,
+                      urlData.rowNumber,
+                      result.pageId
+                    );
+                  }
+                })
+                .catch((error) => {
+                  stats.errors++;
+                  levelErrorCount++;
+                  console.error(
+                    `Error processing ${urlData.computedUrl}:`,
+                    error
+                  );
+                })
+            );
+            await new Promise((resolve) => setTimeout(resolve, CRAWL_DELAY_MS));
+          }
+
+          await Promise.all(activeRequests);
+        }
+
+        console.log(
+          `\n✅ COMPLETED LEVEL ${level} URLS - Success: ${levelSuccessCount}, Errors: ${levelErrorCount}, Missing Parents: ${levelMissingParentsCount}`
+        );
       }
     };
 
-    await processQueue();
+    // Start the processing of levels
+    await processLevelQueue();
+
     // Only generate the final report if we haven't been interrupted
     if (!isShuttingDown) {
       stats.generateReport();
@@ -724,5 +834,10 @@ async function checkUrls(customUrls = null) {
   }
 }
 
-// Start the URL checking process
-checkUrls();
+// Start the URL checking process if this is the main module
+if (require.main === module) {
+  checkUrls();
+}
+
+// Export the checkUrls function for use in reprocessMissingParents.js
+module.exports = { checkUrls };

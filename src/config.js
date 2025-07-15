@@ -40,16 +40,16 @@ module.exports = {
     userAgent: "EAB Crawler/1.0 (https://agency.eab.com/; bobsmith@eab.com)",
     // userAgent:
     //   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
-    urlProcessLimit: 1000,
+    urlProcessLimit: 10,
   },
 
   // File paths
   paths: {
-    errorUrlFile: "error_url.txt",
-    apiLogFile: "API_log.txt",
-    crawlingLogFile: "crawling_log.txt",
-    formLogFile: "form_log.txt",
-    createMenuLogFile: "create_menu_log.txt",
+    errorUrlFile: path.join(process.cwd(), "logs", "error_url.txt"),
+    apiLogFile: path.join(process.cwd(), "logs", "API_log.txt"),
+    crawlingLogFile: path.join(process.cwd(), "logs", "crawling_log.txt"),
+    formLogFile: path.join(process.cwd(), "logs", "form_log.txt"),
+    createMenuLogFile: path.join(process.cwd(), "logs", "create_menu_log.txt"),
     imagesDir: path.join(process.cwd(), "images"), // Directory to store downloaded images
   },
 };

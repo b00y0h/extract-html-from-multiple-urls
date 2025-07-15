@@ -12,8 +12,10 @@ const {
   cachePages,
   getPathFromCache,
 } = require("./utils/pageCache");
+const { wpApi, wpPublicApi } = require("./apiClients");
 
 // Helper function to create an axios instance with proper auth and configuration
+// This is kept for backwards compatibility
 function createWpAxios(requiresAuth = true) {
   const instance = axios.create({
     baseURL: config.wordpress.apiEndpointUrl,
@@ -44,7 +46,7 @@ function createWpAxios(requiresAuth = true) {
 
 // Create axios instances for authenticated and public requests
 const wpAuthApi = createWpAxios(true);
-const wpPublicApi = createWpAxios(false);
+// const wpPublicApi = createWpAxios(false);
 
 // Helper function for rate limiting
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -590,17 +592,99 @@ async function postToWordPress(url, content, title, action = "Move") {
       const pageByPath = await findPageByExactPath(fullPath);
 
       if (pageByPath) {
-        console.log(
-          `Found page by full path with ID ${pageByPath}, ✨ skipping creation`
-        );
+        console.log(`Found page by full path with ID ${pageByPath}`);
+
+        // For Move action, update the content of the existing page
+        if (action === "Move" && content) {
+          console.log(
+            `Updating content for existing page with ID: ${pageByPath}`
+          );
+
+          // Apply rate limiting
+          await sleep(config.wordpress.rateLimitMs);
+
+          // Update the page content using the WordPress API
+          try {
+            const updateData = {
+              content: content,
+            };
+
+            // If title is provided, update it too
+            if (title) {
+              updateData.title = title;
+            }
+
+            const updateResponse = await wpAuthApi.post(
+              `/wp/v2/pages/${pageByPath}`,
+              updateData
+            );
+            console.log(
+              `✅ Successfully updated content for page ID: ${pageByPath}`
+            );
+          } catch (updateError) {
+            console.error(
+              `Failed to update content for page ID ${pageByPath}: ${updateError.message}`
+            );
+            if (updateError.response) {
+              console.error(`Status code: ${updateError.response.status}`);
+              console.error(`Response data:`, updateError.response.data);
+            }
+          }
+        } else {
+          console.log(
+            `✨ Skipping content update (not a Move action or no content provided)`
+          );
+        }
+
         return { pageId: pageByPath };
       }
 
       console.log(`No page found by full path, will create new page`);
     } else {
-      console.log(
-        `Page already exists with ID ${existingPageId}, ✨ skipping creation`
-      );
+      console.log(`Page already exists with ID ${existingPageId}`);
+
+      // For Move action, update the content of the existing page
+      if (action === "Move" && content) {
+        console.log(
+          `Updating content for existing page with ID: ${existingPageId}`
+        );
+
+        // Apply rate limiting
+        await sleep(config.wordpress.rateLimitMs);
+
+        // Update the page content using the WordPress API
+        try {
+          const updateData = {
+            content: content,
+          };
+
+          // If title is provided, update it too
+          if (title) {
+            updateData.title = title;
+          }
+
+          const updateResponse = await wpAuthApi.post(
+            `/wp/v2/pages/${existingPageId}`,
+            updateData
+          );
+          console.log(
+            `✅ Successfully updated content for page ID: ${existingPageId}`
+          );
+        } catch (updateError) {
+          console.error(
+            `Failed to update content for page ID ${existingPageId}: ${updateError.message}`
+          );
+          if (updateError.response) {
+            console.error(`Status code: ${updateError.response.status}`);
+            console.error(`Response data:`, updateError.response.data);
+          }
+        }
+      } else {
+        console.log(
+          `✨ Skipping content update (not a Move action or no content provided)`
+        );
+      }
+
       return { pageId: existingPageId };
     }
 
@@ -962,5 +1046,4 @@ module.exports = {
   findPageBySlug,
   findPageByPath,
   getParentPagePath,
-  validateWordPressConnection,
 };
