@@ -54,6 +54,7 @@ const CONCURRENCY_LIMIT = config.crawler.concurrencyLimit;
 const CRAWL_DELAY_MS = config.crawler.crawlDelayMs;
 const USER_AGENT = config.crawler.userAgent;
 const URL_PROCESS_LIMIT = config.crawler.urlProcessLimit;
+console.log(`🚨 DEBUG: URL Process Limit configured as: ${URL_PROCESS_LIMIT}`);
 
 // Sleep function for rate limiting
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -571,6 +572,19 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
 // Main function to process URLs from the Google Sheet
 async function checkUrls(customUrls = null) {
   try {
+    console.log("\n========================================================");
+    console.log(`🔢 URL PROCESS LIMIT: ${URL_PROCESS_LIMIT}`);
+    if (URL_PROCESS_LIMIT <= 0) {
+      console.log(
+        `⚠️ PROCESSING ALL URLS (limit disabled by setting to ${URL_PROCESS_LIMIT})`
+      );
+    } else {
+      console.log(
+        `✅ Will process at most ${URL_PROCESS_LIMIT} URLs from spreadsheet`
+      );
+    }
+    console.log("========================================================\n");
+
     // Validate WordPress connection before proceeding with migration
     console.log("Validating WordPress connection before starting migration...");
     try {
@@ -620,13 +634,34 @@ async function checkUrls(customUrls = null) {
     const auth = await getAuthToken();
     let urls = customUrls || (await getUrlsFromSheet(auth));
 
-    // Initialize stats
-    stats.totalUrls = urls.length;
-
+    // Check if there are actually URLs to process before doing anything else
     if (urls.length === 0) {
-      console.error("No URLs found.");
+      console.error(
+        "\n⚠️ No URLs found to process. Check your Google Sheet for the following issues:"
+      );
+      console.error(
+        "1. Make sure your sheet has rows with Source URLs and destination URLs"
+      );
+      console.error(
+        "2. Make sure the 'Date Imported' column is empty for URLs you want to process"
+      );
+      console.error(
+        "3. Make sure the Action column has 'Move' or 'Create' values"
+      );
+      console.error(
+        "4. Verify the column headers match exactly what the script expects"
+      );
+      console.error(
+        "   - Required columns: Source, Action, Date Imported, Destination"
+      );
+      console.error(
+        "\nRun with URL_PROCESS_LIMIT=0 for more debugging information."
+      );
       process.exit(1);
     }
+
+    // Initialize stats
+    stats.totalUrls = urls.length;
 
     // URLs are already sorted by priority from getUrlsFromSheet
     // Additional sort by hierarchy while maintaining priority order
@@ -672,34 +707,55 @@ async function checkUrls(customUrls = null) {
     await syncCacheWithSpreadsheet(sortedUrls);
 
     // Limit the number of URLs to process if needed
-    if (URL_PROCESS_LIMIT < sortedUrls.length) {
-      console.log(`⚠️ Limiting processing to first ${URL_PROCESS_LIMIT} URLs`);
+    if (URL_PROCESS_LIMIT > 0 && URL_PROCESS_LIMIT < sortedUrls.length) {
+      console.log(
+        `⚠️ Limiting processing to first ${URL_PROCESS_LIMIT} URLs of ${sortedUrls.length} total URLs`
+      );
 
       // Limit while maintaining hierarchical integrity
       const limitedUrls = [];
       let count = 0;
 
+      // Clear all levels first
+      const originalUrlsByLevel = { ...urlsByLevel };
+      for (let level = 0; level <= maxLevel; level++) {
+        urlsByLevel[level] = [];
+      }
+
+      // Fill levels up to the limit
       for (
         let level = 0;
         level <= maxLevel && count < URL_PROCESS_LIMIT;
         level++
       ) {
-        if (urlsByLevel[level]) {
-          const levelUrls = urlsByLevel[level].slice(
+        if (originalUrlsByLevel[level]) {
+          const levelUrls = originalUrlsByLevel[level].slice(
             0,
             URL_PROCESS_LIMIT - count
           );
-          limitedUrls.push(...levelUrls);
-          count += levelUrls.length;
 
-          // Update urlsByLevel to match our limit
-          urlsByLevel[level] = levelUrls;
+          if (levelUrls.length > 0) {
+            limitedUrls.push(...levelUrls);
+            urlsByLevel[level] = levelUrls;
+            count += levelUrls.length;
+
+            console.log(
+              `  - Level ${level}: Added ${levelUrls.length} URLs (total: ${count}/${URL_PROCESS_LIMIT})`
+            );
+          }
         }
       }
 
       // Update the sortedUrls array for backwards compatibility
       sortedUrls.length = 0;
       sortedUrls.push(...limitedUrls);
+
+      console.log(
+        `📊 After limiting: Processing ${limitedUrls.length} URLs total`
+      );
+
+      // Update total for stats
+      stats.totalUrls = limitedUrls.length;
     }
 
     console.log("\n📊 URL Processing Plan - Strict Hierarchical Order:");
