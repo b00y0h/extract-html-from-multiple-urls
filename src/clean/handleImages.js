@@ -73,17 +73,31 @@ function handleImages($, rootUrl, mediaResults = []) {
         console.log(
           `📝 Building WordPress image block for ID: ${mediaItem.id}`
         );
+        
+        // Check if image is wrapped in an anchor tag
+        const $anchor = $(el).parent('a');
+        const hasLink = $anchor.length > 0;
+        const href = hasLink ? $anchor.attr('href') : null;
+
         // Start building the image block
         let blockAttributes = {
           id: mediaItem.id,
           sizeSlug: "full",
-          linkDestination: "none",
+          linkDestination: hasLink ? "custom" : "none",
         };
 
         // Create a properly formatted WordPress image block
         let imageBlock = `<!-- wp:image ${JSON.stringify(
           blockAttributes
-        )} -->\n<figure class=\"wp-block-image size-full\"><img src=\"${
+        )} -->\n<figure class=\"wp-block-image size-full\">`;
+
+        // Add anchor tag if present
+        if (hasLink) {
+          imageBlock += `<a href="${href}">`;
+        }
+
+        // Add the image tag
+        imageBlock += `<img src=\"${
           mediaItem.wordpressUrl
         }" alt="${alt}" class="wp-image-${mediaItem.id}"`;
 
@@ -92,8 +106,16 @@ function handleImages($, rootUrl, mediaResults = []) {
           imageBlock += ` title=\"${title}\"`;
         }
 
-        // Close img tag and figure - ensuring they stay together
-        imageBlock += `/></figure>\n<!-- /wp:image -->`;
+        // Close image tag
+        imageBlock += `/>`
+
+        // Close anchor tag if present
+        if (hasLink) {
+          imageBlock += `</a>`;
+        }
+
+        // Close figure and block
+        imageBlock += `</figure>\n<!-- /wp:image -->`;
 
         console.log(`📄 Generated WordPress block:\n${imageBlock}`);
 
@@ -106,8 +128,8 @@ function handleImages($, rootUrl, mediaResults = []) {
           block: imageBlock,
         });
 
-        // Replace the parent <p> if the <img> is the only child, otherwise just replace the <img>
-        const $parent = $(el).parent();
+        // Handle the replacement based on the parent elements
+        const $parent = hasLink ? $anchor.parent() : $(el).parent();
         if ($parent.is("p")) {
           const nonImageContent = $parent.contents().filter(function() {
             return this.type === 'text' && this.data.trim().length > 0;
