@@ -9,10 +9,8 @@ const config = require("../config");
 const { wpApi, wpPublicApi } = require("../apiClients"); // Use the centralized API clients
 const { logMessage } = require("./logs");
 
-// Use the centralized API clients instead of creating our own
-// We'll keep these variable names to minimize code changes
+// Use the centralized API clients
 const wpAuthApi = wpApi;
-const wpPublicApi = wpPublicApi;
 
 /**
  * Find a page by its complete hierarchical path
@@ -89,8 +87,11 @@ async function findPageByFullPath(path) {
             // Move up one level
             parentId = parent.parent;
           } catch (error) {
+            // Ensure we don't log the error object directly
             logMessage(
-              `Error retrieving parent page: ${error.message}`,
+              `Error retrieving parent page: ${
+                error.message || "Unknown error"
+              }`,
               config.paths.createMenuLogFile
             );
             hierarchyMatches = false;
@@ -177,8 +178,9 @@ async function findPageByFullPath(path) {
     // If we reach here, we didn't find a page with the correct hierarchy
     return null;
   } catch (error) {
+    // Ensure we don't log the error object directly
     logMessage(
-      `Error in findPageByFullPath: ${error.message}`,
+      `Error in findPageByFullPath: ${error.message || "Unknown error"}`,
       config.paths.createMenuLogFile
     );
     return null;

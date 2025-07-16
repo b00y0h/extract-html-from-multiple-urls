@@ -25,12 +25,6 @@ const wpConfig = {
   username: config.wordpress.username,
   password: config.wordpress.password,
 };
-console.log(
-  "✅✅✅✅✅✅ ~ wpConfig:",
-  wpConfig.endpoint,
-  wpConfig.username,
-  wpConfig.password
-);
 
 /**
  * Validates WordPress connection before running any migration
