@@ -656,9 +656,13 @@ async function postToWordPress(url, content, title, action = "Move") {
 
     // Prepare the page data
     const pageData = {
-      title:
-        title ||
-        slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " "),
+      title: title
+        ? !content
+          ? `⭐${title}`
+          : title
+        : !content
+        ? `⭐${slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ")}`
+        : slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " "),
       content: content || "",
       status: "publish",
       slug: slug,

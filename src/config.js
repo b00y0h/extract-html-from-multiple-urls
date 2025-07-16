@@ -40,7 +40,7 @@ module.exports = {
     // userAgent: "EAB Crawler/1.0 (https://agency.eab.com/; bobsmith@eab.com)",
     userAgent:
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
-    urlProcessLimit: 3,
+    urlProcessLimit: 500,
   },
 
   // File paths
