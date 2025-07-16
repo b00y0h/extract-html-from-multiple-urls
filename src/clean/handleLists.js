@@ -3,6 +3,13 @@ function handleLists($) {
   $("ul").each((i, el) => {
     $(el).before("<!-- wp:list -->\n").after("\n<!-- /wp:list -->");
   });
+
+  $("ol").each((i, el) => {
+    $(el)
+      .before('<!-- wp:list  {"ordered":true} -->\n')
+      .after("\n<!-- /wp:list -->");
+  });
+
   $("li").each((i, el) => {
     $(el).before("<!-- wp:list-item -->\n").after("\n<!-- /wp:list-item -->");
   });

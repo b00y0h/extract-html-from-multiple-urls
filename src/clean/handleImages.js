@@ -108,12 +108,23 @@ function handleImages($, rootUrl, mediaResults = []) {
 
         // Replace the parent <p> if the <img> is the only child, otherwise just replace the <img>
         const $parent = $(el).parent();
-        if (
-          $parent.is("p") &&
-          $parent.contents().length === 1 &&
-          $parent.children("img").length === 1
-        ) {
-          $parent.replaceWith(imageBlock);
+        if ($parent.is("p")) {
+          const nonImageContent = $parent.contents().filter(function() {
+            return this.type === 'text' && this.data.trim().length > 0;
+          }).text().trim();
+
+          if ($parent.contents().length === 1 && $parent.children("img").length === 1) {
+            // If there's only an image in the paragraph, replace the whole paragraph
+            $parent.replaceWith(imageBlock);
+          } else {
+            // If there's text content, replace the image and preserve the text
+            $(el).replaceWith(imageBlock);
+            if (nonImageContent) {
+              // Insert text content after the image block
+              $(imageBlock).after(`\n<p>${nonImageContent}</p>\n`);
+              $parent.remove(); // Remove the original paragraph
+            }
+          }
         } else {
           $(el).replaceWith(imageBlock);
         }
