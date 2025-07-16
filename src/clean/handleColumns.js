@@ -1,14 +1,15 @@
 function handleColumns($) {
-  // Handle both paragraph__column and row-light-space containers
-  const columnContainers = $(".paragraph__column, .row-light-space");
+  // Handle both paragraph__column, row-light-space, and Bootstrap row containers
+  const columnContainers = $(".paragraph__column, .row-light-space, .row");
   if (columnContainers.length === 0) return;
 
   columnContainers.each((containerIndex, container) => {
     const $container = $(container);
 
-    // Find all direct child divs that match either pattern:
+    // Find all direct child divs that match any of these patterns:
     // 1. Classes containing "col" (for __3col, __2col, etc.)
-    // 2. Bootstrap-style columns (col-sm-*, col-xs-*, etc.)
+    // 2. Bootstrap-style columns (col-md-*, col-sm-*, etc.)
+    // 3. Regular column classes
     const columnDivs = $container.children('div[class*="col"]');
 
     if (columnDivs.length === 0) return;
