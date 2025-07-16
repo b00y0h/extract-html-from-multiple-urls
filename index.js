@@ -77,109 +77,6 @@ process.on("SIGINT", async () => {
   }, 1000);
 });
 
-function transformContentToWpBlocks(content) {
-  // console.log("⭐��⭐ ~ transformContentToWpBlocks ~ content:", content);
-  const $ = cheerio.load(content);
-
-  // Select the direct child divs within the paragraph__column
-  const childDivs = $(".paragraph__column > div");
-
-  // Array to hold each column's content
-  let columns = [];
-
-  // Iterate over each child div and store its HTML content
-  childDivs.each((i, childDiv) => {
-    columns.push($(childDiv).html().trim());
-  });
-  // console.log(
-  //   "🚀🚀🚀🚀 ~ transformContentToWpBlocks ~ columns:",
-  //   columns.length
-  // );
-
-  // if columns.length is 0 then return null
-  if (columns.length === 0) {
-    return null;
-  }
-
-  // Determine the layout based on the number of columns
-  let layout;
-  switch (columns.length) {
-    case 2:
-      layout = "halves";
-      break;
-    case 3:
-      layout = "thirds";
-      break;
-    case 4:
-      layout = "quarters";
-      break;
-    default:
-      layout = "auto"; // Default or custom logic for other numbers
-  }
-
-  // Start building the output
-  let output = `<!-- wp:wsuwp/row {"layout":"${layout}"} -->\n`;
-
-  // Add each column to the output
-  columns.forEach((column) => {
-    output += `<!-- wp:wsuwp/column -->\n${column}\n<!-- /wp:wsuwp/column -->\n`;
-  });
-
-  // Close the row block
-  output += `<!-- /wp:wsuwp/row -->`;
-  return output;
-}
-
-// New function to process images before sending to WordPress
-async function processContentImages(content, images) {
-  if (!images || images.length === 0) {
-    return { content, successfulMedia: [] };
-  }
-
-  console.log(`🔄 Processing ${images.length} images for content...`);
-
-  // Process each image
-  const successfulMedia = [];
-  let updatedContent = content;
-
-  for (const image of images) {
-    try {
-      console.log(`📸 Processing image: ${image.url}`);
-
-      // Ensure the images directory exists
-      if (!fs.existsSync(config.paths.imagesDir)) {
-        console.log(
-          `DEBUG: Creating images directory: ${config.paths.imagesDir}`
-        );
-        fs.mkdirSync(config.paths.imagesDir, { recursive: true, mode: 0o755 });
-        console.log(`DEBUG: Images directory created`);
-      }
-
-      const result = await processImage(image);
-      if (result) {
-        successfulMedia.push(result);
-
-        // Replace the image URL in the content
-        const originalUrl = image.url;
-        const wpUrl = result.wordpressUrl;
-
-        // Use a regex that handles both quoted and unquoted URLs
-        const urlRegex = new RegExp(
-          originalUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-          "g"
-        );
-        updatedContent = updatedContent.replace(urlRegex, wpUrl);
-
-        console.log(`✅ Replaced image URL: ${originalUrl} → ${wpUrl}`);
-      }
-    } catch (error) {
-      console.error(`❌ Error processing image: ${error.message}`);
-    }
-  }
-
-  return { content: updatedContent, successfulMedia };
-}
-
 async function processContent(
   contentResponse,
   originalUrl,
@@ -198,7 +95,7 @@ async function processContent(
     const pathSegments = computedUrl.split("/").filter(Boolean);
     const slug = pathSegments[pathSegments.length - 1];
     const title =
-      slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ");
+      "⭐" + (slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " "));
 
     const dummyContent = `<!-- wp:paragraph -->
 <p>This is a placeholder page for ${title}. Content will be added soon.</p>
@@ -230,9 +127,23 @@ async function processContent(
     `🔍 Looking for sections with selector: div[role="main"] > div.row > section`
   );
 
-  const sections = $('div[role="main"] > div.row > section')
-    .map((i, el) => $(el).html())
-    .get();
+  // Initialize array to hold all content pieces
+  const contentPieces = [];
+
+  // Find all sections within div.row
+  $('div[role="main"] > div.row > section').each((i, section) => {
+    const $section = $(section);
+    contentPieces.push($section.html());
+
+    // Look for any aside that directly follows this section
+    const $nextAside = $section.next("aside");
+    if ($nextAside.length) {
+      console.log("📎 Found an aside following a section, including it");
+      contentPieces.push($nextAside.html());
+    }
+  });
+
+  const sections = contentPieces;
 
   console.log(`📊 Found ${sections.length} sections`);
 
