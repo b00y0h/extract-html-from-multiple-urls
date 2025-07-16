@@ -16,6 +16,8 @@
 const axios = require("axios");
 const https = require("https");
 const config = require("./src/config");
+const fs = require("fs");
+const path = require("path");
 
 // Parse command-line arguments
 const args = process.argv.slice(2);
@@ -99,10 +101,34 @@ if (!dryRun) {
   deleteContent();
 }
 
+// Helper function to delete a directory and all its contents recursively
+function deleteDirRecursive(dirPath) {
+  if (fs.existsSync(dirPath)) {
+    fs.readdirSync(dirPath).forEach((file) => {
+      const curPath = path.join(dirPath, file);
+      if (fs.lstatSync(curPath).isDirectory()) {
+        // Recurse into subdirectories
+        deleteDirRecursive(curPath);
+      } else {
+        // Delete files
+        fs.unlinkSync(curPath);
+      }
+    });
+    // Delete the empty directory itself
+    fs.rmdirSync(dirPath);
+  }
+}
+
 // Main deletion function
 async function deleteContent() {
   console.log("Starting content deletion process...");
   try {
+    // Clear the dist directory first
+    const distPath = path.join(process.cwd(), "dist");
+    console.log("Cleaning dist directory...");
+    deleteDirRecursive(distPath);
+    console.log("Dist directory cleaned.");
+
     // Delete pages if selected
     if (contentTypes.includes("pages")) {
       console.log("Will process pages...");
