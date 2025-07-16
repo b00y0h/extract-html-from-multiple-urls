@@ -1,13 +1,36 @@
 function handleParagraphs($) {
-  // First handle divs that contain only text
+  // First handle divs that contain text or inline elements
   $("div").each(function() {
     const $this = $(this);
-    // Check if the div only contains text nodes and whitespace
-    if ($this.children().length === 0 && $this.text().trim().length > 0) {
-      const text = $this.text().trim();
-      // Keep the original div but wrap its content in a paragraph
-      $this.html(`<!-- wp:paragraph -->\n<p>${text}</p>\n<!-- /wp:paragraph -->\n`);
-    }
+    const children = $this.children();
+    
+    // Process direct child elements
+    children.each(function(i, el) {
+      const $child = $(el);
+      
+      // Skip if it's already a paragraph
+      if ($child.is('p')) {
+        return;
+      }
+      
+      // If it's an inline element (like an anchor), wrap it in a paragraph
+      if ($child.is('a, span, em, strong, b, i')) {
+        const html = $child.clone().wrap('<div>').parent().html();
+        $child.replaceWith(`<!-- wp:paragraph -->\n<p>${html}</p>\n<!-- /wp:paragraph -->\n`);
+      }
+    });
+
+    // Handle text nodes that are direct children of the div
+    const textNodes = $this.contents().filter(function() {
+      return this.nodeType === 3 && this.nodeValue.trim().length > 0;
+    });
+
+    textNodes.each(function() {
+      const text = $(this).text().trim();
+      if (text) {
+        $(this).replaceWith(`<!-- wp:paragraph -->\n<p>${text}</p>\n<!-- /wp:paragraph -->\n`);
+      }
+    });
   });
 
   // Handle existing paragraphs
