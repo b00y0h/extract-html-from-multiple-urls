@@ -37,10 +37,10 @@ module.exports = {
   crawler: {
     concurrencyLimit: 5,
     crawlDelayMs: 1000, // 2 seconds between content fetches
-    userAgent: "EAB Crawler/1.0 (https://agency.eab.com/; bobsmith@eab.com)",
-    // userAgent:
-    //   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
-    urlProcessLimit: 10,
+    // userAgent: "EAB Crawler/1.0 (https://agency.eab.com/; bobsmith@eab.com)",
+    userAgent:
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
+    urlProcessLimit: 3,
   },
 
   // File paths

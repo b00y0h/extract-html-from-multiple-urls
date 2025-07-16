@@ -2,6 +2,7 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const https = require("https");
+const FormData = require("form-data");
 const { logMessage } = require("./utils/logs");
 const config = require("./config");
 
@@ -75,14 +76,19 @@ async function batchUploadImagesToWP(images, wpConfig) {
       console.log(`🚀 Uploading to WordPress: ${fileName}`);
 
       try {
-        // Upload to WordPress
+        // Upload to WordPress using multipart/form-data to include post_parent
+        const form = new FormData();
+        form.append("file", buffer, { filename: fileName, contentType });
+        if (image.postParentId) {
+          form.append("post_parent", image.postParentId);
+        }
+
         const uploadResponse = await axios.post(
           `${wpConfig.endpoint}/wp/v2/media`,
-          buffer,
+          form,
           {
             headers: {
-              "Content-Type": contentType,
-              "Content-Disposition": `attachment; filename="${fileName}"`,
+              ...form.getHeaders(),
               "User-Agent": config.wordpress.userAgent,
             },
             auth: {

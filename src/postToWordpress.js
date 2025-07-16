@@ -14,39 +14,8 @@ const {
 } = require("./utils/pageCache");
 const { wpApi, wpPublicApi } = require("./apiClients");
 
-// Helper function to create an axios instance with proper auth and configuration
-// This is kept for backwards compatibility
-function createWpAxios(requiresAuth = true) {
-  const instance = axios.create({
-    baseURL: config.wordpress.apiEndpointUrl,
-    headers: {
-      "User-Agent": config.wordpress.userAgent,
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    httpsAgent: new https.Agent({
-      rejectUnauthorized: false,
-    }),
-    timeout: 10000,
-  });
-
-  // Add authentication if required
-  if (requiresAuth && config.wordpress.username && config.wordpress.password) {
-    const base64Credentials = Buffer.from(
-      `${config.wordpress.username}:${config.wordpress.password}`
-    ).toString("base64");
-
-    instance.defaults.headers.common[
-      "Authorization"
-    ] = `Basic ${base64Credentials}`;
-  }
-
-  return instance;
-}
-
-// Create axios instances for authenticated and public requests
-const wpAuthApi = createWpAxios(true);
-// const wpPublicApi = createWpAxios(false);
+// IMPORTANT: Use the centralized API clients from apiClients.js
+// Do not create local instances that might have different configuration
 
 // Helper function for rate limiting
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -557,10 +526,7 @@ async function postToWordPress(url, content, title, action = "Move") {
             // Apply rate limiting
             await sleep(config.wordpress.rateLimitMs);
 
-            const response = await wpAuthApi.post(
-              "/wp/v2/pages",
-              placeholderData
-            );
+            const response = await wpApi.post("/wp/v2/pages", placeholderData);
             const newPage = response.data;
             parentId = newPage.id;
             console.log(`Created placeholder page with ID: ${parentId}`);
@@ -614,7 +580,7 @@ async function postToWordPress(url, content, title, action = "Move") {
               updateData.title = title;
             }
 
-            const updateResponse = await wpAuthApi.post(
+            const updateResponse = await wpApi.post(
               `/wp/v2/pages/${pageByPath}`,
               updateData
             );
@@ -663,7 +629,7 @@ async function postToWordPress(url, content, title, action = "Move") {
             updateData.title = title;
           }
 
-          const updateResponse = await wpAuthApi.post(
+          const updateResponse = await wpApi.post(
             `/wp/v2/pages/${existingPageId}`,
             updateData
           );
@@ -712,7 +678,7 @@ async function postToWordPress(url, content, title, action = "Move") {
     // Apply rate limiting
     await sleep(config.wordpress.rateLimitMs);
 
-    const response = await wpAuthApi.post("/wp/v2/pages", pageData);
+    const response = await wpApi.post("/wp/v2/pages", pageData);
     const newPage = response.data;
     console.log(`Successfully created page with ID: ${newPage.id}`);
 
@@ -733,8 +699,8 @@ async function updateParentPage(pageId, parentPageId) {
     // Apply rate limiting
     await sleep(config.wordpress.rateLimitMs);
 
-    // Use the authenticated wpAuthApi instance
-    const response = await wpAuthApi.post(`/wp/v2/pages/${pageId}`, {
+    // Use the authenticated wpApi instance
+    const response = await wpApi.post(`/wp/v2/pages/${pageId}`, {
       parent: parentPageId,
     });
 

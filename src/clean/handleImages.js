@@ -1,11 +1,26 @@
 const path = require("path");
 
+// Flag to track if we've processed any images successfully
+let processedImages = false;
+
 function handleImages($, rootUrl, mediaResults = []) {
+  console.log(`\n🔍 HANDLE IMAGES START ---------------------`);
+  console.log(`Found ${$("img").length} images to process`);
+  console.log(`Media results available: ${mediaResults.length}`);
+
+  // Reset the processed flag
+  processedImages = false;
+
+  // Store processed image data for emergency fallback
+  const processedImageData = [];
+
   $("img").each((i, el) => {
     let src = $(el).attr("src");
     const alt = $(el).attr("alt") || "";
     const title = $(el).attr("title") || "";
     const caption = $(el).attr("data-caption") || "";
+
+    console.log(`\n📷 Processing image ${i + 1}/${$("img").length}: ${src}`);
 
     if (src) {
       // Skip SVG images completely
@@ -28,6 +43,7 @@ function handleImages($, rootUrl, mediaResults = []) {
       // Decode and clean up the source URL for comparison
       const cleanSrc = decodeURIComponent(src).replace(/\s+/g, "-");
       const basename = path.basename(cleanSrc);
+      console.log(`🔎 Looking for match for basename: ${basename}`);
 
       // Look for matching media result
       const mediaItem = mediaResults.find((item) => {
@@ -42,10 +58,21 @@ function handleImages($, rootUrl, mediaResults = []) {
         );
 
         // Check if either the original URL or WordPress URL contains the basename
-        return cleanOriginal.includes(basename) || cleanNew.includes(basename);
+        const isMatch =
+          cleanOriginal.includes(basename) || cleanNew.includes(basename);
+        if (isMatch) {
+          console.log(`✅ Found matching media item:
+            - ID: ${item.id}
+            - Original URL: ${item.originalUrl}
+            - WordPress URL: ${item.wordpressUrl}`);
+        }
+        return isMatch;
       });
 
       if (mediaItem?.wordpressUrl && mediaItem?.id) {
+        console.log(
+          `📝 Building WordPress image block for ID: ${mediaItem.id}`
+        );
         // Start building the image block
         let blockAttributes = {
           id: mediaItem.id,
@@ -53,23 +80,45 @@ function handleImages($, rootUrl, mediaResults = []) {
           linkDestination: "none",
         };
 
-        // Create block with attributes
-        let imageBlock = `<!-- wp:image ${JSON.stringify(blockAttributes)} -->
-<figure class="wp-block-image size-full"><img src="${
+        // Create a properly formatted WordPress image block
+        let imageBlock = `<!-- wp:image ${JSON.stringify(
+          blockAttributes
+        )} -->\n<figure class=\"wp-block-image size-full\"><img src=\"${
           mediaItem.wordpressUrl
-        }" alt="${alt}"`;
+        }" alt="${alt}" class="wp-image-${mediaItem.id}"`;
 
         // Add title if present
         if (title) {
-          imageBlock += ` title="${title}"`;
+          imageBlock += ` title=\"${title}\"`;
         }
 
-        // Close img tag and figure
-        imageBlock += "/></figure>\n<!-- /wp:image -->";
+        // Close img tag and figure - ensuring they stay together
+        imageBlock += `/></figure>\n<!-- /wp:image -->`;
 
-        // Replace the original img tag with the WordPress block
-        $(el).replaceWith(imageBlock);
-        console.log(`✅ Replaced image ${basename} with WordPress block`);
+        console.log(`📄 Generated WordPress block:\n${imageBlock}`);
+
+        // Store the image data for emergency fallback
+        processedImageData.push({
+          id: mediaItem.id,
+          url: mediaItem.wordpressUrl,
+          alt: alt,
+          title: title,
+          block: imageBlock,
+        });
+
+        // Replace the parent <p> if the <img> is the only child, otherwise just replace the <img>
+        const $parent = $(el).parent();
+        if (
+          $parent.is("p") &&
+          $parent.contents().length === 1 &&
+          $parent.children("img").length === 1
+        ) {
+          $parent.replaceWith(imageBlock);
+        } else {
+          $(el).replaceWith(imageBlock);
+        }
+
+        console.log(`✅ Image ${basename} processed`);
       } else {
         console.log(
           `⚠️ No WordPress media found for image: ${basename} - Skipping image`
@@ -78,6 +127,28 @@ function handleImages($, rootUrl, mediaResults = []) {
       }
     }
   });
+
+  // Store processed image data for use in cleanHtmlContent.js
+  $.processedImageData = processedImageData;
+
+  // Report on processing results
+  if (processedImages) {
+    console.log(
+      `✅ Successfully processed ${processedImageData.length} images directly`
+    );
+  } else if (processedImageData.length > 0) {
+    console.log(
+      `⚠️ Created ${processedImageData.length} image blocks but direct insertion may have failed`
+    );
+  } else {
+    console.log(`ℹ️ No images were processed`);
+  }
+
+  console.log(`🔍 HANDLE IMAGES END ---------------------\n`);
 }
 
-module.exports = { handleImages };
+// Export the function and a flag indicating if we've processed images
+module.exports = {
+  handleImages,
+  hasProcessedImages: () => processedImages,
+};

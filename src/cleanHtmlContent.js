@@ -60,7 +60,6 @@ async function transformToWPBlocks(
     handleBlockquotes($);
     handleAccordions($);
     cleanUpContent($);
-    handleParagraphs($);
     handleButtons($);
     // Pass the computedUrl which is the WordPress destination where the form should live
     handleForms($, rootUrl, computedUrl);
@@ -68,19 +67,71 @@ async function transformToWPBlocks(
     handleLists($);
     handleTables($);
     handleHorizontalRules($);
+    // Move handleParagraphs to the very end to wrap all paragraphs after all other handlers
+    handleParagraphs($);
 
     console.log("🧹 Starting content cleanup...");
-    let content = $.html();
+    let content = $("body").html();
+
+    // Apply the image block replacer if it exists
+    if (
+      $.imageBlockReplacer &&
+      $.imageBlockData &&
+      $.imageBlockData.length > 0
+    ) {
+      console.log(
+        `🖼️ Applying image block replacements for ${$.imageBlockData.length} images...`
+      );
+      content = $.imageBlockReplacer(content);
+    } else {
+      console.log(
+        `⚠️ No image blocks to replace or replacer function not available`
+      );
+    }
+
+    // Check if we need to add an emergency image block
+    const wpImageBlocks = (content.match(/<!-- wp:image/g) || []).length;
+    if (
+      wpImageBlocks === 0 &&
+      $.processedImageData &&
+      $.processedImageData.length > 0
+    ) {
+      console.log(
+        `⚠️ No image blocks found in final HTML! Emergency insertion needed.`
+      );
+
+      // Find the first heading to insert after
+      if (
+        content.includes("</h1>") &&
+        content.includes("<!-- /wp:heading -->")
+      ) {
+        console.log(`🔍 Found heading to insert image after`);
+
+        // Get the first processed image data
+        const firstImage = $.processedImageData[0];
+
+        // Insert the image block after the first heading
+        content = content.replace(
+          "</h1>\n<!-- /wp:heading -->",
+          "</h1>\n<!-- /wp:heading -->\n\n" + firstImage.block + "\n\n"
+        );
+
+        console.log(`✅ Emergency image insertion completed`);
+      }
+    }
 
     // Clean up any remaining artifacts
     content = content
-      .replace(/\s+/g, " ")
+      // Preserve line breaks in WordPress blocks
+      .replace(/(\s+)(?!(wp:|\/wp:))/g, " ") // Only replace whitespace not followed by wp: or /wp:
       .replace(/> </g, ">\n<")
       .replace(/<!--\s*wp:/g, "<!-- wp:")
       .replace(/-->\s*</g, "-->\n<")
+      // Ensure proper spacing around WordPress blocks
+      .replace(/(<!-- wp:.*? -->)/g, "\n$1\n")
+      .replace(/(<!-- \/wp:.*? -->)/g, "\n$1\n")
       .trim();
 
-    console.log("✨ Content cleanup complete");
     console.log("🔄 TRANSFORM END ---------------------\n");
 
     return {

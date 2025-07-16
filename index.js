@@ -474,11 +474,36 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     console.log(`🔄 Checking for redirects...`);
     await sleep(config.crawler.crawlDelayMs);
 
-    // Configure axios for content fetching
+    // Get the hostname from the URL for the Referer header
+    let hostname = "";
+    try {
+      const urlObj = new URL(originalUrl.originalUrl || originalUrl);
+      hostname = urlObj.hostname;
+    } catch (e) {
+      console.log(`⚠️ Could not parse URL for hostname: ${e.message}`);
+    }
+
+    // Configure axios for content fetching with browser-like headers
     const axiosConfig = {
       httpsAgent: new https.Agent({ rejectUnauthorized: false }),
       headers: {
         "User-Agent": USER_AGENT,
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        Connection: "keep-alive",
+        "Cache-Control": "max-age=0",
+        "Sec-Ch-Ua":
+          '"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"macOS"',
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        Referer: hostname ? `https://${hostname}` : undefined,
       },
       maxRedirects: 10,
       validateStatus: function (status) {
@@ -543,9 +568,41 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
     if (error.response) {
       status = error.response.status;
       let responseDetails = `Response status: ${status}`;
-      if (status !== 404) {
-        responseDetails += `, data: ${JSON.stringify(error.response.data)}`;
-      } else {
+
+      // Special handling for common error codes
+      if (status === 403) {
+        console.error(
+          `\n⛔ FORBIDDEN (403) ACCESS ERROR for URL: ${
+            originalUrl.originalUrl || originalUrl
+          }`
+        );
+        console.error(
+          `This usually means the website is blocking automated requests.`
+        );
+        console.error(`Possible solutions:`);
+        console.error(
+          `1. Add a delay between requests (increase crawlDelayMs in config)`
+        );
+        console.error(
+          `2. Update the User-Agent to a more recent browser version`
+        );
+        console.error(`3. Try accessing through a different IP address`);
+        console.error(
+          `4. Check if the site requires cookies or session tokens`
+        );
+
+        // Try to get any error details that might help
+        try {
+          const responseText = error.response.data
+            ? typeof error.response.data === "string"
+              ? error.response.data.substring(0, 500)
+              : JSON.stringify(error.response.data).substring(0, 500)
+            : "No response data";
+          console.error(`\nResponse excerpt: ${responseText}...`);
+        } catch (e) {
+          console.error(`Could not extract response data: ${e.message}`);
+        }
+      } else if (status === 404) {
         console.log(
           `⚠️ URL returned 404 (Not Found): ${
             originalUrl.originalUrl || originalUrl
@@ -555,7 +612,10 @@ async function fetchUrl(originalUrl, computedUrl, currentUrl, totalUrls) {
           `${originalUrl.originalUrl || originalUrl}\n`,
           NOT_FOUND_URL_FILE
         ); // Add to dedicated 404 log
+      } else {
+        responseDetails += `, data: ${JSON.stringify(error.response.data)}`;
       }
+
       console.error(`📉 ${responseDetails}`);
       logMessage(responseDetails);
     }

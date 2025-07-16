@@ -6,40 +6,13 @@
 const axios = require("axios");
 const https = require("https");
 const config = require("../config");
+const { wpApi, wpPublicApi } = require("../apiClients"); // Use the centralized API clients
 const { logMessage } = require("./logs");
 
-// Helper function to create an axios instance with proper auth and configuration
-function createWpAxios(requiresAuth = true) {
-  const instance = axios.create({
-    baseURL: config.wordpress.apiEndpointUrl,
-    headers: {
-      "User-Agent": config.wordpress.userAgent,
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    httpsAgent: new https.Agent({
-      rejectUnauthorized: false,
-    }),
-    timeout: 10000,
-  });
-
-  // Add authentication if required
-  if (requiresAuth && config.wordpress.username && config.wordpress.password) {
-    const base64Credentials = Buffer.from(
-      `${config.wordpress.username}:${config.wordpress.password}`
-    ).toString("base64");
-
-    instance.defaults.headers.common[
-      "Authorization"
-    ] = `Basic ${base64Credentials}`;
-  }
-
-  return instance;
-}
-
-// Create axios instances for authenticated and public requests
-const wpAuthApi = createWpAxios(true);
-const wpPublicApi = createWpAxios(false);
+// Use the centralized API clients instead of creating our own
+// We'll keep these variable names to minimize code changes
+const wpAuthApi = wpApi;
+const wpPublicApi = wpPublicApi;
 
 /**
  * Find a page by its complete hierarchical path
