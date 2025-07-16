@@ -20,6 +20,7 @@ const {
   handleImageLinks,
   handleSocialLinks,
   handleAccordions,
+  handleColumns,
 } = require("./clean/");
 const { getRootUrl } = require("./utils/urls");
 
@@ -59,6 +60,7 @@ async function transformToWPBlocks(
     handleImages($, rootUrl, mediaResults); // This will now have the media results
     handleBlockquotes($);
     handleAccordions($);
+    handleColumns($); // Process columns before general cleanup
     cleanUpContent($);
     handleButtons($);
     // Pass the computedUrl which is the WordPress destination where the form should live

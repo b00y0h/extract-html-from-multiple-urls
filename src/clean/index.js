@@ -17,6 +17,7 @@ const { removeScripts } = require("./removeScripts");
 const { handleImageLinks } = require("./handleImageLinks");
 const { handleSocialLinks } = require("./handleSocialLinks");
 const { handleAccordions } = require("./handleAccordions");
+const { handleColumns } = require("./handleColumns");
 
 module.exports = {
   removeSpecificTags,
@@ -38,4 +39,5 @@ module.exports = {
   handleImageLinks,
   handleSocialLinks,
   handleAccordions,
+  handleColumns,
 };
